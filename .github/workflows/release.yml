@@ -54,6 +54,7 @@ jobs:
             scripts/ \
             styles/ \
             lang/ \
+            assets/ \
             -x "*.git*"
 
       - name: Upload Release Assets

@@ -1,8 +1,7 @@
 /* =========================================================
- * KORUJA STREAM HUD — DARK FANTASY CSS (FOUNDRY VTT v14)
+ * KORUJA STREAM HUD — OVERLAY INTEGRADA & EDITOR VISUAL
  * ========================================================= */
 
-/* Modo Stream Transparente: oculta toda UI nativa do Foundry */
 body.koruja-stream-mode-active,
 html:has(body.koruja-stream-mode-active) {
   background: transparent !important;
@@ -15,12 +14,11 @@ body.koruja-stream-mode-active > *:not(#koruja-stream-hud) {
   opacity: 0 !important;
 }
 
-/* Container Principal da Overlay (1920x1080) */
 #koruja-stream-hud {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 1920px;
+  height: 1080px;
   pointer-events: none;
   z-index: 99999;
   font-family: "Signika", "Cinzel", Georgia, serif;
@@ -28,425 +26,299 @@ body.koruja-stream-mode-active > *:not(#koruja-stream-hud) {
 }
 
 /* =========================================================
- * LAYOUTS DISPONÍVEIS
+ * MOLDURA EMBUTIDA SANGUIS ET THUS (1920x1080)
  * ========================================================= */
 
-/* 1. Alinhado exatamente na base das 4 câmeras do gameplay_overlay.html (1920x1080) */
-#koruja-stream-hud.layout-overlay-sanguis .koruja-player-card {
+.koruja-builtin-frame {
   position: absolute;
-  top: 976px;
-  width: 340px;
-}
-#koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-1 { left: 20px; }
-#koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-2 { left: 380px; }
-#koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-3 { left: 740px; }
-#koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-4 { left: 1100px; }
-
-#koruja-stream-hud.layout-overlay-sanguis .koruja-card-inner {
-  padding: 5px 9px;
-  gap: 9px;
-  border-radius: 4px;
-}
-#koruja-stream-hud.layout-overlay-sanguis .koruja-portrait-wrap,
-#koruja-stream-hud.layout-overlay-sanguis .koruja-portrait {
-  width: 44px;
-  height: 44px;
-}
-#koruja-stream-hud.layout-overlay-sanguis .koruja-hp-bar-outer {
-  height: 17px;
-}
-#koruja-stream-hud.layout-overlay-sanguis .koruja-roll-toast {
-  top: -94px;
-  left: auto;
-  right: 8px;
-  transform: translateY(8px);
-}
-#koruja-stream-hud.layout-overlay-sanguis .koruja-roll-toast.visible {
-  transform: translateY(0);
+  inset: 0;
+  pointer-events: none;
 }
 
-/* 2. Barra Inferior Centralizada */
-#koruja-stream-hud.layout-bar-bottom {
+.koruja-custom-overlay-bg {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.koruja-top-bar {
+  position: absolute;
+  top: 0; left: 0; width: 1920px; height: 48px;
+  background: linear-gradient(180deg, rgba(14, 15, 20, 0.96) 0%, rgba(9, 10, 14, 0.9) 100%);
+  border-bottom: 2px solid #8a6d3b;
   display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 20px;
-  padding-bottom: 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.85);
 }
-#koruja-stream-hud.layout-bar-bottom .koruja-player-card {
-  width: 340px;
+.koruja-top-bar .top-left {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 20px; font-weight: 800; letter-spacing: 3px; color: #f6d37f;
+}
+.koruja-top-bar .top-left img { width: 32px; height: 32px; object-fit: contain; }
+.koruja-top-bar .top-center {
+  font-size: 14px; letter-spacing: 2.5px; color: #e8dcc8;
+  background: rgba(30, 24, 38, 0.7); padding: 4px 18px; border: 1px solid #8a6d3b;
+}
+.koruja-top-bar .top-right {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; letter-spacing: 2px; color: #c7bba7;
+}
+.koruja-top-bar .live-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
 }
 
-/* 3. Barra Superior Centralizada */
-#koruja-stream-hud.layout-bar-top {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 20px;
-  padding-top: 20px;
+.koruja-bottom-bar {
+  position: absolute;
+  bottom: 0; left: 0; width: 1920px; height: 40px;
+  background: linear-gradient(0deg, rgba(14, 15, 20, 0.96) 0%, rgba(9, 10, 14, 0.9) 100%);
+  border-top: 2px solid #8a6d3b;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; font-size: 12px; letter-spacing: 2px; color: #c7bba7;
 }
-#koruja-stream-hud.layout-bar-top .koruja-player-card {
-  width: 340px;
-}
+.koruja-bottom-bar .motto { color: #f87171; font-style: italic; letter-spacing: 1px; }
 
-/* 4. Lista Vertical à Esquerda */
-#koruja-stream-hud.layout-sidebar-left {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 14px;
-  padding-left: 24px;
+/* Recortes transparentes com moldura gótica */
+.koruja-cutout {
+  position: absolute;
+  background: transparent;
+  border: 2px solid #6b532e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), inset 0 0 12px rgba(0, 0, 0, 0.65);
 }
-#koruja-stream-hud.layout-sidebar-left .koruja-player-card {
-  width: 320px;
+.koruja-cutout-foundry { top: 56px; left: 20px; width: 1420px; height: 798px; }
+.koruja-cutout-gm { top: 56px; left: 1460px; width: 440px; height: 258px; }
+.koruja-cutout-p1 { top: 874px; left: 20px; width: 340px; height: 154px; }
+.koruja-cutout-p2 { top: 874px; left: 380px; width: 340px; height: 154px; }
+.koruja-cutout-p3 { top: 874px; left: 740px; width: 340px; height: 154px; }
+.koruja-cutout-p4 { top: 874px; left: 1100px; width: 340px; height: 154px; }
+
+.cutout-tag {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(180deg, #27080b 0%, #121318 100%);
+  border: 1px solid #d4af37; padding: 2px 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #f6d37f; white-space: nowrap;
 }
 
 /* =========================================================
- * DESIGN DO CARD DO JOGADOR (ESTÉTICA SANGUIS ET THUS)
+ * CAIXA DE ROLAGENS & CHAT AO VIVO + CAIXA DE COMBATE
+ * ========================================================= */
+
+.koruja-chat-feed-box {
+  position: absolute;
+  width: 440px;
+  height: 520px;
+  background: rgba(12, 13, 18, 0.85);
+  border: 2px solid #8a6d3b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.feed-header {
+  height: 36px;
+  background: linear-gradient(180deg, #232530 0%, #15161d 100%);
+  border-bottom: 1px solid #8a6d3b;
+  display: flex; align-items: center; padding: 0 14px;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #f6d37f;
+}
+
+.feed-body {
+  flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+}
+
+.koruja-feed-msg {
+  background: rgba(26, 28, 36, 0.78);
+  border-left: 3px solid #d4af37;
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+}
+.koruja-feed-msg.crit { border-left-color: #fbbf24; background: rgba(120, 53, 15, 0.45); }
+.koruja-feed-msg.fumble { border-left-color: #ef4444; background: rgba(127, 29, 29, 0.45); }
+.feed-author { font-size: 11px; font-weight: 700; color: #f6d37f; margin-bottom: 2px; }
+.feed-text { color: #f4ece1; line-height: 1.3; }
+.feed-text .roll-sub { opacity: 0.8; font-size: 11px; }
+.feed-empty { opacity: 0.55; font-style: italic; text-align: center; margin-top: 20px; }
+
+.koruja-combat-box {
+  position: absolute;
+  width: 440px;
+  height: 154px;
+  background: rgba(12, 13, 18, 0.88);
+  border: 2px solid #8a6d3b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+}
+.combat-label { font-size: 11px; letter-spacing: 3px; color: #c7bba7; }
+.combat-round { font-size: 26px; font-weight: 900; letter-spacing: 3px; color: #ef4444; text-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+.combat-turn { font-size: 14px; font-style: italic; color: #f6d37f; }
+
+/* =========================================================
+ * CARD DO JOGADOR (340px largura)
  * ========================================================= */
 
 .koruja-player-card {
-  position: relative;
+  position: absolute;
+  width: 340px;
   transition: transform 0.25s ease, filter 0.3s ease;
 }
 
 .koruja-card-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
+  gap: 9px;
+  padding: 5px 9px;
   background: linear-gradient(135deg, rgba(16, 13, 15, 0.94) 0%, rgba(28, 18, 20, 0.92) 100%);
   border: 2px solid #8a6d3b;
-  border-radius: 6px;
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.85),
-    inset 0 0 12px rgba(139, 0, 0, 0.25);
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85), inset 0 0 12px rgba(139, 0, 0, 0.25);
 }
 
-/* Destaque de Turno Ativo no Combate */
 .koruja-player-card.is-active-turn .koruja-card-inner {
   border-color: #ffd166;
-  box-shadow:
-    0 0 18px rgba(255, 209, 102, 0.65),
-    inset 0 0 16px rgba(255, 190, 80, 0.25);
-  transform: translateY(-4px);
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.7), inset 0 0 14px rgba(255, 190, 80, 0.25);
+  transform: translateY(-3px);
 }
-
-/* Personagem Caído (0 PV) */
 .koruja-player-card.is-down .koruja-card-inner {
   border-color: #7f1d1d;
   filter: grayscale(0.75) brightness(0.75);
 }
 
-/* Animações de Dano e Cura */
 @keyframes korujaDamageFlash {
-  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.9); transform: translateX(0); }
+  0%, 100% { transform: translateX(0); }
   20% { box-shadow: 0 0 26px 6px rgba(220, 38, 38, 0.95); transform: translateX(-5px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-3px); }
-  100% { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85); transform: translateX(0); }
+  45% { transform: translateX(5px); }
 }
-
 @keyframes korujaHealFlash {
-  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.9); }
   35% { box-shadow: 0 0 24px 6px rgba(34, 197, 94, 0.9); }
-  100% { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85); }
 }
+.koruja-player-card.flash-damage .koruja-card-inner { animation: korujaDamageFlash 0.6s ease-out; }
+.koruja-player-card.flash-heal .koruja-card-inner { animation: korujaHealFlash 0.75s ease-out; }
 
-.koruja-player-card.flash-damage .koruja-card-inner {
-  animation: korujaDamageFlash 0.65s ease-out;
-}
-.koruja-player-card.flash-heal .koruja-card-inner {
-  animation: korujaHealFlash 0.75s ease-out;
-}
-
-/* Retrato + Escudo de CA */
-.koruja-portrait-wrap {
-  position: relative;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-}
-
-.koruja-portrait {
-  width: 52px;
-  height: 52px;
-  object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid #c9a45c;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-}
-
-.koruja-portrait.bloodied {
-  border-color: #dc2626;
-}
+.koruja-portrait-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.koruja-portrait { width: 44px; height: 44px; object-fit: cover; border-radius: 50%; border: 2px solid #c9a45c; }
+.koruja-portrait.bloodied { border-color: #dc2626; }
 
 .koruja-ac-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -6px;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 11px;
-  text-shadow: 0 1px 2px #000;
+  position: absolute; bottom: -4px; right: -6px; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #fff;
 }
-.koruja-ac-badge i {
-  position: absolute;
-  font-size: 24px;
-  color: #2c3545;
-  -webkit-text-stroke: 1.5px #d4af37;
-  z-index: 0;
-}
-.koruja-ac-badge span {
-  position: relative;
-  z-index: 1;
-  margin-top: -1px;
-}
+.koruja-ac-badge i { position: absolute; font-size: 22px; color: #2c3545; -webkit-text-stroke: 1.5px #d4af37; z-index: 0; }
+.koruja-ac-badge span { position: relative; z-index: 1; margin-top: -1px; }
 
 .koruja-turn-badge {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, #b45309, #f59e0b);
-  color: #111;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-  padding: 1px 6px;
-  border-radius: 3px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(90deg, #b45309, #f59e0b); color: #111;
+  font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 3px;
 }
 
-/* Nome, Nível e Barra de PV */
-.koruja-stats-wrap {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
+.koruja-stats-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.koruja-name-row { display: flex; justify-content: space-between; align-items: baseline; }
+.koruja-char-name { font-size: 14px; font-weight: 700; color: #f7ead7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koruja-char-lvl { font-size: 11px; font-weight: 600; color: #d4af37; }
 
-.koruja-name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.koruja-char-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #f7ead7;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.koruja-char-lvl {
-  font-size: 11px;
-  font-weight: 600;
-  color: #d4af37;
-  flex-shrink: 0;
-}
-
-/* Barra de Vida */
 .koruja-hp-bar-outer {
-  position: relative;
-  width: 100%;
-  height: 20px;
-  background: #140c0d;
-  border: 1px solid #4a3525;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.9);
+  position: relative; width: 100%; height: 17px; background: #140c0d;
+  border: 1px solid #4a3525; border-radius: 4px; overflow: hidden;
 }
-
-.koruja-hp-bar-fill {
-  height: 100%;
-  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease;
-}
-
-.koruja-hp-bar-fill.hp-healthy {
-  background: linear-gradient(90deg, #7f1d1d 0%, #b91c1c 60%, #dc2626 100%);
-}
-.koruja-hp-bar-fill.hp-bloodied {
-  background: linear-gradient(90deg, #9a3412 0%, #ea580c 100%);
-}
-.koruja-hp-bar-fill.hp-critical {
-  background: linear-gradient(90deg, #450a0a 0%, #991b1b 100%);
-}
-
+.koruja-hp-bar-fill { height: 100%; transition: width 0.45s ease; }
+.koruja-hp-bar-fill.hp-healthy { background: linear-gradient(90deg, #7f1d1d 0%, #dc2626 100%); }
+.koruja-hp-bar-fill.hp-bloodied { background: linear-gradient(90deg, #9a3412 0%, #ea580c 100%); }
+.koruja-hp-bar-fill.hp-critical { background: linear-gradient(90deg, #450a0a 0%, #991b1b 100%); }
 .koruja-hp-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px #000, 0 0 5px #000;
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000;
 }
+.koruja-hp-text .hp-temp { color: #60a5fa; margin-left: 4px; }
 
-.koruja-hp-text .hp-temp {
-  color: #60a5fa;
-  margin-left: 4px;
-}
-
-/* Ícones de Condições */
-.koruja-card-conditions {
-  display: flex;
-  gap: 4px;
-  margin-top: 2px;
-}
-.koruja-cond-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 1px solid #c9a45c;
-  background: rgba(0, 0, 0, 0.8);
-}
-
-/* =========================================================
- * POPUP DE ROLAGEM DE DADOS (TOAST)
- * ========================================================= */
+.koruja-card-conditions { display: flex; gap: 4px; }
+.koruja-cond-icon { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #c9a45c; }
 
 .koruja-roll-toast {
-  position: absolute;
-  top: -38px;
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  opacity: 0;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  background: rgba(18, 14, 16, 0.96);
-  border: 1.5px solid #c9a45c;
-  border-radius: 20px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 10;
+  position: absolute; top: -92px; right: 8px;
+  transform: translateY(8px); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+  background: rgba(18, 14, 16, 0.96); border: 1.5px solid #c9a45c; border-radius: 16px;
+  transition: opacity 0.25s ease, transform 0.25s ease; z-index: 10;
 }
-
-.koruja-roll-toast.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.koruja-roll-toast.roll-crit {
-  border-color: #fbbf24;
-  background: linear-gradient(90deg, #451a03, #78350f);
-  box-shadow: 0 0 18px rgba(251, 191, 36, 0.8);
-}
-
-.koruja-roll-toast.roll-fumble {
-  border-color: #ef4444;
-  background: linear-gradient(90deg, #450a0a, #7f1d1d);
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.8);
-}
-
-.koruja-roll-toast .roll-total {
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
-}
-.koruja-roll-toast .roll-formula {
-  font-size: 11px;
-  color: #cbd5e1;
-}
-.koruja-roll-toast .roll-tag {
-  font-size: 11px;
-  font-weight: 800;
-  color: #fde68a;
-  letter-spacing: 0.5px;
-}
+.koruja-roll-toast.visible { opacity: 1; transform: translateY(0); }
+.koruja-roll-toast.roll-crit { border-color: #fbbf24; background: #78350f; }
+.koruja-roll-toast.roll-fumble { border-color: #ef4444; background: #7f1d1d; }
+.koruja-roll-toast .roll-total { font-size: 15px; font-weight: 800; color: #fff; }
+.koruja-roll-toast .roll-formula { font-size: 11px; color: #cbd5e1; }
+.koruja-roll-toast .roll-tag { font-size: 10px; font-weight: 800; color: #fde68a; }
 
 /* =========================================================
- * JANELA DE CONFIGURAÇÃO (GM)
+ * EDITOR VISUAL DRAG & DROP (APPLICATION V2 DO MESTRE)
  * ========================================================= */
 
-.koruja-hud-config-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 8px;
+.koruja-hud-editor-wrap { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.koruja-editor-grid { display: grid; grid-template-columns: 270px 1fr; gap: 14px; }
+.koruja-editor-sidebar { display: flex; flex-direction: column; gap: 6px; }
+.koruja-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #e2c07d; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 3px; }
+
+.koruja-config-list { display: flex; flex-direction: column; gap: 4px; max-height: 195px; overflow-y: auto; }
+.koruja-config-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; background: rgba(0,0,0,0.28); border-radius: 4px; cursor: pointer; }
+.koruja-config-row img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.koruja-config-info { flex: 1; display: flex; flex-direction: column; font-size: 12px; }
+.koruja-config-info span { font-size: 10px; opacity: 0.75; }
+.koruja-order-input { width: 40px !important; text-align: center; }
+
+.koruja-filepicker-row { display: flex; gap: 4px; }
+.koruja-filepicker-row input { flex: 1; }
+.koruja-browse-btn { flex: 0 0 34px; cursor: pointer; }
+.koruja-check-row { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+
+.koruja-editor-stage-wrap { display: flex; flex-direction: column; gap: 8px; }
+.koruja-stage-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.koruja-reset-pos-btn { width: auto; padding: 2px 10px; font-size: 11px; cursor: pointer; }
+
+/* Palco 800x450 (escala 16:9 exata de 1920x1080) */
+.koruja-preview-stage {
+  position: relative;
+  width: 800px;
+  height: 450px;
+  background: #0b0c10 repeating-conic-gradient(#14161e 0% 25%, #0e1016 0% 50%) 50% / 20px 20px;
+  border: 2px solid #8a6d3b;
+  overflow: hidden;
+  user-select: none;
 }
 
-.koruja-config-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-}
+.koruja-stage-bg-custom { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.koruja-stage-bg-builtin { position: absolute; inset: 0; pointer-events: none; font-size: 9px; color: rgba(255,255,255,0.45); }
+.koruja-stage-bg-builtin > div { position: absolute; border: 1px dashed rgba(212,175,55,0.45); display: flex; align-items: center; justify-content: center; }
+.mini-header { top: 0; left: 0; width: 800px; height: 20px; background: rgba(0,0,0,0.6); }
+.mini-slot-foundry { top: 23px; left: 8px; width: 592px; height: 332px; }
+.mini-slot-gm { top: 23px; left: 608px; width: 183px; height: 107px; }
+.mini-cam { top: 364px; width: 141px; height: 64px; }
+.mini-cam.p1 { left: 8px; }
+.mini-cam.p2 { left: 158px; }
+.mini-cam.p3 { left: 308px; }
+.mini-cam.p4 { left: 458px; }
 
-.koruja-config-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-  cursor: pointer;
+.koruja-drag-box {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 11px; font-weight: 700; color: #fff;
+  border-radius: 4px; cursor: grab; z-index: 5;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.8);
 }
-.koruja-config-row:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-.koruja-config-row img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.koruja-config-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.koruja-config-info span {
-  font-size: 11px;
-  opacity: 0.75;
-}
-.koruja-order-input {
-  width: 46px !important;
-  text-align: center;
-}
+.koruja-drag-box:active { cursor: grabbing; outline: 2px solid #fff; }
+.drag-player { width: 141px; height: 26px; background: rgba(139, 0, 0, 0.88); border: 1px solid #d4af37; }
+.drag-chat { width: 183px; height: 216px; background: rgba(25, 35, 65, 0.72); border: 1px solid #60a5fa; }
+.drag-combat { width: 183px; height: 64px; background: rgba(75, 25, 25, 0.78); border: 1px solid #f59e0b; }
 
-.koruja-url-box {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-}
-.koruja-url-box input {
-  font-family: monospace;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.koruja-save-btn {
-  width: 100%;
-  padding: 8px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.koruja-stream-btn {
-  margin-top: 4px;
-}
+.koruja-url-box { display: flex; flex-direction: column; gap: 4px; }
+.koruja-url-box input { font-family: monospace; font-size: 12px; cursor: pointer; }
+.koruja-save-btn { width: 100%; padding: 8px; font-weight: 700; cursor: pointer; }
+.koruja-stream-btn { margin-top: 4px; }
