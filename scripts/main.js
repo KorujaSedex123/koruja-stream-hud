@@ -12,14 +12,14 @@ const DEFAULT_POSITIONS = {
 };
 
 const ROLEPLAY_POSITIONS = {
-  p1: { x: 24, y: 452 },
-  p2: { x: 496, y: 452 },
-  p3: { x: 968, y: 452 },
-  p4: { x: 24, y: 940 },
-  p5: { x: 496, y: 940 },
-  p6: { x: 968, y: 940 },
-  chat: { x: 1456, y: 384 },
-  combat: { x: 1456, y: 874 }
+  p1: { x: 36, y: 334 },
+  p2: { x: 498, y: 334 },
+  p3: { x: 960, y: 334 },
+  p4: { x: 36, y: 690 },
+  p5: { x: 498, y: 690 },
+  p6: { x: 960, y: 690 },
+  chat: { x: 1430, y: 372 },
+  combat: { x: 1430, y: 874 }
 };
 
 function getEffectiveOverlayMode() {
@@ -572,8 +572,26 @@ class KorujaStreamHUD {
     } else if (overlayMode === "builtin-roleplay") {
       const sceneName = game.scenes?.active?.name || "Sanguis et Thus";
       const crestPath = `modules/${MODULE_ID}/assets/crest.png`;
+      const wallpaperPath = `modules/${MODULE_ID}/assets/wallpaper.jpg`;
       backdropHtml = `
         <div class="koruja-builtin-frame koruja-rp-frame">
+          <svg class="koruja-rp-bg-svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <mask id="koruja-rp-holes">
+                <rect width="1920" height="1080" fill="white" />
+                <rect x="36" y="90" width="426" height="240" rx="4" fill="black" />
+                <rect x="498" y="90" width="426" height="240" rx="4" fill="black" />
+                <rect x="960" y="90" width="426" height="240" rx="4" fill="black" />
+                <rect x="36" y="446" width="426" height="240" rx="4" fill="black" />
+                <rect x="498" y="446" width="426" height="240" rx="4" fill="black" />
+                <rect x="960" y="446" width="426" height="240" rx="4" fill="black" />
+                <rect x="1430" y="90" width="454" height="255" rx="4" fill="black" />
+              </mask>
+            </defs>
+            <image href="${wallpaperPath}" width="1920" height="1080" preserveAspectRatio="xMidYMid slice" mask="url(#koruja-rp-holes)" />
+            <rect width="1920" height="1080" fill="rgba(8, 7, 11, 0.62)" mask="url(#koruja-rp-holes)" />
+          </svg>
+
           <div class="koruja-top-bar">
             <div class="top-left">
               <img src="${crestPath}" onerror="this.style.display='none'">
@@ -582,14 +600,23 @@ class KorujaStreamHUD {
             <div class="top-right"><span class="live-dot"></span> AO VIVO</div>
           </div>
 
-          <!-- Grade 3x2 de Câmeras Grandes (456x460 cada) + Câmera Mestre (440x300) -->
+          <!-- Grade 3x2 de Câmeras 16:9 (426x240 cada) + Câmera Mestre 16:9 (454x255) -->
           <div class="koruja-cutout koruja-rp-p1"></div>
           <div class="koruja-cutout koruja-rp-p2"></div>
           <div class="koruja-cutout koruja-rp-p3"></div>
           <div class="koruja-cutout koruja-rp-p4"></div>
           <div class="koruja-cutout koruja-rp-p5"></div>
           <div class="koruja-cutout koruja-rp-p6"></div>
-          <div class="koruja-cutout koruja-rp-gm"></div>
+          <div class="koruja-cutout koruja-rp-gm"><div class="cutout-tag">MESTRE</div></div>
+
+          <!-- Rodapé Cinematográfico da Campanha -->
+          <div class="koruja-rp-lore-banner">
+            <img class="rp-lore-crest" src="${crestPath}" onerror="this.style.display='none'">
+            <div class="rp-lore-text">
+              <div class="rp-lore-title">SANGUIS ET THUS • ATO I</div>
+              <div class="rp-lore-sub">"Ubi Sanguis, Ibi Thus — Onde há Sangue, há Incenso"</div>
+            </div>
+          </div>
         </div>
       `;
     } else if (overlayMode === "custom-image" && customOverlayImg) {
