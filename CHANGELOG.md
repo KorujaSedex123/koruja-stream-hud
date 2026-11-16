@@ -2,6 +2,16 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.2.0] - 2026-11-15
+
+### Adicionado
+- **Detecção de 20 Natural e 1 Natural** (`KorujaStreamHUD.detectNaturalD20`) com exibição automática de banner cinematográfico temporário (`.koruja-epic-banner.epic-crit` e `.epic-fumble`) sobre o recorte do mapa em rolagens públicas.
+- Botões rápidos de teste no Editor Visual (**Testar 20 Natural** e **Testar 1 Natural**) disparando o alerta instantaneamente para a aba da Live via `BroadcastChannel("koruja-stream-hud")`.
+
+### Alterado
+- **Canvas `#board` visível no Modo Stream**: ocultação restrita à interface do Foundry (`#interface`, `#ui-left`, `#ui-right`, `#ui-top`, `#ui-bottom`, `#hotbar`, `#players`, `#navigation`, `#pause`, `#fps`, `#notifications`, `.application`), mantendo `#board` posicionado dentro do recorte do mapa.
+- **Design mais limpo e menos poluído**: barra superior minimalista na moldura embutida (`builtin-sanguis`), recortes com bordas finas sem rótulos repetitivos, feed de rolagens limitado às últimas 5 rolagens públicas e cards/caixas translúcidos mais compactos.
+
 ## [1.0.0] - 2026-11-15
 
 ### Adicionado

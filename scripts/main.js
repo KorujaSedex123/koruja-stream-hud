@@ -140,9 +140,19 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             <span>Mostrar Caixa de Rodada / Turno</span>
           </label>
 
-          <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
-          </button>
+          <div class="koruja-live-actions">
+            <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
+            </button>
+            <div class="koruja-test-buttons">
+              <button type="button" class="koruja-test-btn test-crit" id="koruja-test-crit" title="Disparar banner de 20 Natural na aba da Live">
+                ⚔️ Testar 20 Natural
+              </button>
+              <button type="button" class="koruja-test-btn test-fumble" id="koruja-test-fumble" title="Disparar banner de 1 Natural na aba da Live">
+                💀 Testar 1 Natural
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Coluna Direita: Editor Visual Drag & Drop (800x450 = escala de 1920x1080) -->
@@ -210,12 +220,44 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const browseBtn = container.querySelector(".koruja-browse-btn");
     const resetBtn = container.querySelector(".koruja-reset-pos-btn");
     const openTabBtn = container.querySelector("#koruja-open-live-tab");
+    const testCritBtn = container.querySelector("#koruja-test-crit");
+    const testFumbleBtn = container.querySelector("#koruja-test-fumble");
     const hiddenJson = container.querySelector("#koruja-positions-json");
     const stage = container.querySelector("#koruja-preview-stage");
 
     openTabBtn?.addEventListener("click", () => {
       window.open(`${window.location.origin}/?streamhud=1`, "_blank", "width=1920,height=1080");
     });
+
+    const triggerEpicTest = (result) => {
+      const partyIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
+      const sampleActor =
+        partyIds.map(id => game.actors.get(id)).find(Boolean) ||
+        game.actors.find(a => a.type === "character");
+      const payload = {
+        type: "epic-banner-test",
+        result,
+        name: sampleActor?.name || "Aventureiro",
+        img: sampleActor?.img || ""
+      };
+
+      if (typeof BroadcastChannel !== "undefined") {
+        const channel = new BroadcastChannel(MODULE_ID);
+        channel.postMessage(payload);
+        channel.close();
+      }
+      if (KorujaStreamHUD.shouldRender()) {
+        KorujaStreamHUD.showEpicBanner(result, payload);
+      }
+      ui.notifications.info(
+        result === "crit"
+          ? "Teste de 20 Natural enviado para a tela da Live!"
+          : "Teste de 1 Natural enviado para a tela da Live!"
+      );
+    };
+
+    testCritBtn?.addEventListener("click", () => triggerEpicTest("crit"));
+    testFumbleBtn?.addEventListener("click", () => triggerEpicTest("fumble"));
 
     modeSelect?.addEventListener("change", () => {
       const val = modeSelect.value;
@@ -334,6 +376,9 @@ class KorujaStreamHUD {
   static hpCache = new Map();
   static rollTimers = new Map();
   static chatHistory = [];
+  static epicBannerTimer = null;
+  static epicBannerEl = null;
+  static broadcastChannel = null;
 
   static init() {
     if (!this.shouldRender()) {
@@ -353,6 +398,16 @@ class KorujaStreamHUD {
       document.body.appendChild(this.container);
     }
 
+    if (!this.broadcastChannel && typeof BroadcastChannel !== "undefined") {
+      this.broadcastChannel = new BroadcastChannel(MODULE_ID);
+      this.broadcastChannel.onmessage = (event) => {
+        const data = event.data;
+        if (data?.type === "epic-banner-test" && (data.result === "crit" || data.result === "fumble")) {
+          this.showEpicBanner(data.result, { name: data.name, img: data.img });
+        }
+      };
+    }
+
     this.loadRecentMessages();
     this.render();
   }
@@ -364,6 +419,15 @@ class KorujaStreamHUD {
 
   static destroy() {
     document.body.classList.remove("koruja-stream-mode-active");
+    if (this.epicBannerTimer) {
+      clearTimeout(this.epicBannerTimer);
+      this.epicBannerTimer = null;
+    }
+    this.epicBannerEl = null;
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+      this.broadcastChannel = null;
+    }
     if (this.container) {
       this.container.remove();
       this.container = null;
@@ -373,9 +437,9 @@ class KorujaStreamHUD {
   static loadRecentMessages() {
     const publicMsgs = game.messages.contents
       .filter(m => !m.blind && (!m.whisper || m.whisper.length === 0))
-      .slice(-8);
+      .slice(-5);
 
-    this.chatHistory = publicMsgs.map(m => this.#formatChatMessage(m)).filter(Boolean);
+    this.chatHistory = publicMsgs.map(m => this.#formatChatMessage(m)).filter(Boolean).slice(-5);
   }
 
   static #formatChatMessage(message) {
@@ -435,26 +499,17 @@ class KorujaStreamHUD {
           <div class="koruja-top-bar">
             <div class="top-left">
               <img src="${crestPath}" onerror="this.style.display='none'">
-              <span>SANGUIS ET THUS</span>
+              <span>${sceneName.toUpperCase()}</span>
             </div>
-            <div class="top-center">⚔️ ${sceneName.toUpperCase()}</div>
-            <div class="top-right"><span class="live-dot"></span> AO VIVO • D&D 5E</div>
+            <div class="top-right"><span class="live-dot"></span> AO VIVO</div>
           </div>
 
           <div class="koruja-cutout koruja-cutout-foundry"></div>
-          <div class="koruja-cutout koruja-cutout-gm">
-            <div class="cutout-tag">MESTRE</div>
-          </div>
-          <div class="koruja-cutout koruja-cutout-p1"><div class="cutout-tag">JOGADOR 1</div></div>
-          <div class="koruja-cutout koruja-cutout-p2"><div class="cutout-tag">JOGADOR 2</div></div>
-          <div class="koruja-cutout koruja-cutout-p3"><div class="cutout-tag">JOGADOR 3</div></div>
-          <div class="koruja-cutout koruja-cutout-p4"><div class="cutout-tag">JOGADOR 4</div></div>
-
-          <div class="koruja-bottom-bar">
-            <span>CAMPANHA: SANGUIS ET THUS</span>
-            <span class="motto">"Ubi Sanguis, Ibi Thus — Onde há Sangue, há Incenso"</span>
-            <span>FOUNDRY VTT LIVE</span>
-          </div>
+          <div class="koruja-cutout koruja-cutout-gm"></div>
+          <div class="koruja-cutout koruja-cutout-p1"></div>
+          <div class="koruja-cutout koruja-cutout-p2"></div>
+          <div class="koruja-cutout koruja-cutout-p3"></div>
+          <div class="koruja-cutout koruja-cutout-p4"></div>
         </div>
       `;
     } else if (overlayMode === "custom-image" && customOverlayImg) {
@@ -530,7 +585,7 @@ class KorujaStreamHUD {
     let chatHtml = "";
     if (showChatFeed) {
       const chatCoords = pos.chat || DEFAULT_POSITIONS.chat;
-      const msgs = this.chatHistory.slice(-7).map(m => `
+      const msgs = this.chatHistory.slice(-5).map(m => `
         <div class="koruja-feed-msg ${m.type}">
           <div class="feed-author">${m.author}</div>
           <div class="feed-text">${m.text}</div>
@@ -560,6 +615,65 @@ class KorujaStreamHUD {
     }
 
     this.container.innerHTML = `${backdropHtml}${cardsHtml}${chatHtml}${combatHtml}`;
+    if (this.epicBannerEl) {
+      this.container.appendChild(this.epicBannerEl);
+    }
+  }
+
+  static detectNaturalD20(roll) {
+    if (!roll) return null;
+
+    const dice = Array.isArray(roll.dice) ? roll.dice : [];
+    for (const die of dice) {
+      if (die?.faces !== 20) continue;
+      const results = Array.isArray(die.results) ? die.results : [];
+      for (const r of results) {
+        if (r?.active === false) continue;
+        if (r?.result === 20) return "crit";
+        if (r?.result === 1) return "fumble";
+      }
+    }
+
+    if (roll.isCritical) return "crit";
+    if (roll.isFumble) return "fumble";
+    return null;
+  }
+
+  static showEpicBanner(type, { name = "Aventureiro", img = "" } = {}) {
+    if (!this.shouldRender() || !this.container) return;
+
+    if (this.epicBannerTimer) {
+      clearTimeout(this.epicBannerTimer);
+      this.epicBannerTimer = null;
+    }
+    if (this.epicBannerEl) {
+      this.epicBannerEl.remove();
+      this.epicBannerEl = null;
+    }
+
+    const isCrit = type === "crit";
+    const banner = document.createElement("div");
+    banner.className = `koruja-epic-banner ${isCrit ? "epic-crit" : "epic-fumble"}`;
+    const titleText = isCrit ? "⚔️ 20 NATURAL — ACERTO CRÍTICO!" : "💀 1 NATURAL — FALHA CRÍTICA!";
+
+    banner.innerHTML = `
+      ${img ? `<img class="epic-banner-portrait" src="${img}" alt="${name}" onerror="this.style.display='none'">` : ""}
+      <div class="epic-banner-content">
+        <div class="epic-banner-actor">${name}</div>
+        <div class="epic-banner-title">${titleText}</div>
+      </div>
+    `;
+
+    this.epicBannerEl = banner;
+    this.container.appendChild(banner);
+
+    this.epicBannerTimer = setTimeout(() => {
+      if (this.epicBannerEl === banner) {
+        banner.remove();
+        this.epicBannerEl = null;
+      }
+      this.epicBannerTimer = null;
+    }, 4500);
   }
 
   static showRollToast(actorId, roll) {
@@ -589,7 +703,7 @@ class KorujaStreamHUD {
     const formatted = this.#formatChatMessage(message);
     if (!formatted) return;
     this.chatHistory.push(formatted);
-    if (this.chatHistory.length > 10) this.chatHistory.shift();
+    if (this.chatHistory.length > 5) this.chatHistory.shift();
     this.render();
   }
 }
@@ -686,10 +800,19 @@ Hooks.on("createChatMessage", (message) => {
   KorujaStreamHUD.pushChatMessage(message);
 
   if (message.rolls?.length > 0) {
+    const roll = message.rolls[0];
     const actorId = message.speaker?.actor;
     const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
     if (actorId && actorIds.includes(actorId)) {
-      KorujaStreamHUD.showRollToast(actorId, message.rolls[0]);
+      KorujaStreamHUD.showRollToast(actorId, roll);
+    }
+
+    const natResult = KorujaStreamHUD.detectNaturalD20(roll);
+    if (natResult) {
+      const actor = actorId ? game.actors.get(actorId) : null;
+      const name = message.speaker?.alias || actor?.name || message.author?.name || "Aventureiro";
+      const img = actor?.img || message.author?.avatar || "";
+      KorujaStreamHUD.showEpicBanner(natResult, { name, img });
     }
   }
 });
