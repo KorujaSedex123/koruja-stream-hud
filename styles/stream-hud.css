@@ -31,16 +31,39 @@ body.koruja-stream-mode-active > *:not(#koruja-stream-hud) {
  * LAYOUTS DISPONÍVEIS
  * ========================================================= */
 
-/* 1. Alinhado exatamente acima das 4 câmeras do gameplay_overlay.html (1920x1080) */
+/* 1. Alinhado exatamente na base das 4 câmeras do gameplay_overlay.html (1920x1080) */
 #koruja-stream-hud.layout-overlay-sanguis .koruja-player-card {
   position: absolute;
-  top: 802px;
+  top: 976px;
   width: 340px;
 }
 #koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-1 { left: 20px; }
 #koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-2 { left: 380px; }
 #koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-3 { left: 740px; }
 #koruja-stream-hud.layout-overlay-sanguis .koruja-player-card.slot-4 { left: 1100px; }
+
+#koruja-stream-hud.layout-overlay-sanguis .koruja-card-inner {
+  padding: 5px 9px;
+  gap: 9px;
+  border-radius: 4px;
+}
+#koruja-stream-hud.layout-overlay-sanguis .koruja-portrait-wrap,
+#koruja-stream-hud.layout-overlay-sanguis .koruja-portrait {
+  width: 44px;
+  height: 44px;
+}
+#koruja-stream-hud.layout-overlay-sanguis .koruja-hp-bar-outer {
+  height: 17px;
+}
+#koruja-stream-hud.layout-overlay-sanguis .koruja-roll-toast {
+  top: -94px;
+  left: auto;
+  right: 8px;
+  transform: translateY(8px);
+}
+#koruja-stream-hud.layout-overlay-sanguis .koruja-roll-toast.visible {
+  transform: translateY(0);
+}
 
 /* 2. Barra Inferior Centralizada */
 #koruja-stream-hud.layout-bar-bottom {
