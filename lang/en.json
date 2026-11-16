@@ -1,0 +1,9 @@
+{
+  "KORUJA_STREAM_HUD": {
+    "Title": "Koruja Stream HUD — Live Party Config",
+    "ButtonLabel": "Stream HUD",
+    "TurnBadge": "TURN",
+    "EmptyWarning": "No players configured in Stream HUD.",
+    "SaveSuccess": "Stream HUD updated successfully."
+  }
+}

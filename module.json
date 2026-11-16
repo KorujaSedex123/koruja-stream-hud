@@ -31,9 +31,24 @@
   "styles": [
     "styles/stream-hud.css"
   ],
+  "languages": [
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
   "url": "https://github.com/korujasedex123/koruja-stream-hud",
-  "manifest": "https://raw.githubusercontent.com/korujasedex123/koruja-stream-hud/main/module.json",
-  "download": "https://github.com/korujasedex123/koruja-stream-hud/archive/refs/heads/main.zip",
+  "manifest": "https://github.com/korujasedex123/koruja-stream-hud/releases/latest/download/module.json",
+  "download": "https://github.com/korujasedex123/koruja-stream-hud/releases/download/v1.0.0/module.zip",
   "readme": "README.md",
+  "license": "LICENSE",
+  "bugs": "https://github.com/korujasedex123/koruja-stream-hud/issues",
+  "changelog": "https://github.com/korujasedex123/koruja-stream-hud/releases",
   "socket": false
 }
