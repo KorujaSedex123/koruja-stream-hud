@@ -114,6 +114,10 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       const sel = npc.id === context.bossActorId ? "selected" : "";
       return `<option value="${npc.id}" ${sel}>${npc.name}</option>`;
     }).join("");
+    const activeTokenBoss = context.bossActorId?.includes(".") ? fromUuidSync(context.bossActorId) : null;
+    const activeTokenOption = activeTokenBoss
+      ? `<option value="${context.bossActorId}" selected>👑 Token no Mapa: ${activeTokenBoss.name}</option>`
+      : "";
 
     const streamUrl = `${window.location.origin}/?streamhud=1`;
     const pos = context.positions;
@@ -132,6 +136,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
           <div class="form-group stacked">
             <select name="bossActorId">
               <option value="">— Nenhum Chefe Ativo —</option>
+              ${activeTokenOption}
               ${bossOptions}
             </select>
             <p class="notes" style="font-size:10px; opacity:0.75; margin:2px 0 0;">Dica: clique com o botão direito em qualquer token no mapa e clique no ícone de Coroa para ativar/desativar na hora!</p>
@@ -536,9 +541,19 @@ class KorujaStreamHUD {
       backdropHtml = `<img class="koruja-custom-overlay-bg" src="${customOverlayImg}" alt="Overlay">`;
     }
 
-    // 2. Barra de Chefe (Boss HP Bar estilo Dark Souls)
+    // 2. Barra de Chefe (Boss HP Bar estilo Dark Souls — suporta Token UUID e Actor ID)
     let bossHtml = "";
-    const bossActor = bossActorId ? game.actors.get(bossActorId) : null;
+    let bossActor = null;
+    if (bossActorId) {
+      if (bossActorId.includes(".")) {
+        const doc = fromUuidSync(bossActorId);
+        bossActor = doc?.actor || doc || null;
+      } else {
+        // Se houver um token desse ator na cena ativa, prioriza o token da cena para ler o PV real
+        const sceneToken = canvas?.tokens?.placeables?.find(t => t.actor?.id === bossActorId);
+        bossActor = sceneToken?.actor || game.actors.get(bossActorId) || null;
+      }
+    }
     if (bossActor) {
       const bhp = bossActor.system?.attributes?.hp || { value: 0, max: 1 };
       const bMax = Math.max(1, Number(bhp.max) || 1);
@@ -649,17 +664,14 @@ class KorujaStreamHUD {
               ${isTurn ? `<div class="koruja-turn-badge">TURNO</div>` : ""}
               ${hasInspiration ? `<div class="koruja-insp-badge" title="Inspiração Heroica"><i class="fa-solid fa-dice-d20"></i></div>` : ""}
               ${isConcentrating ? `<div class="koruja-conc-badge" title="Concentrando em Magia"><i class="fa-solid fa-wand-sparkles"></i></div>` : ""}
-              ${showAC ? `
-                <div class="koruja-ac-badge">
-                  <i class="fa-solid fa-shield"></i>
-                  <span>${ac}</span>
-                </div>
-              ` : ""}
             </div>
             <div class="koruja-stats-wrap">
               <div class="koruja-name-row">
                 <span class="koruja-char-name">${actor.name}</span>
-                <span class="koruja-char-lvl">Nv ${level}</span>
+                <div class="koruja-meta-badges">
+                  ${showAC ? `<span class="koruja-ac-pill" title="Classe de Armadura"><i class="fa-solid fa-shield-halved"></i> ${ac}</span>` : ""}
+                  <span class="koruja-char-lvl">Nv ${level}</span>
+                </div>
               </div>
               ${barOrDeathHtml}
               ${conditionsHtml}
@@ -902,18 +914,19 @@ Hooks.on("renderActorDirectory", (app, html) => {
   headerActions.appendChild(btn);
 });
 
-// Botão de Coroa no Token HUD para marcar/desmarcar Chefe com 1 clique
+// Botão de Coroa no Token HUD para marcar/desmarcar Chefe com 1 clique (usa Token UUID para suportar tokens não-vinculados)
 Hooks.on("renderTokenHUD", (hud, html) => {
   if (!game.user?.isGM) return;
+  const tokenDoc = hud.object?.document;
   const actorId = hud.object?.actor?.id;
-  if (!actorId) return;
+  if (!tokenDoc || !actorId) return;
 
   const root = html instanceof HTMLElement ? html : html[0];
   const colRight = root?.querySelector(".col.right");
   if (!colRight || colRight.querySelector(".koruja-boss-toggle")) return;
 
   const currentBoss = game.settings.get(MODULE_ID, "bossActorId");
-  const isBoss = currentBoss === actorId;
+  const isBoss = currentBoss === tokenDoc.uuid || currentBoss === actorId;
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -921,7 +934,7 @@ Hooks.on("renderTokenHUD", (hud, html) => {
   btn.title = isBoss ? "Remover da Barra de Chefe da Live" : "Exibir na Barra de Chefe da Live";
   btn.innerHTML = `<i class="fa-solid fa-crown"></i>`;
   btn.addEventListener("click", async () => {
-    const nextBoss = isBoss ? "" : actorId;
+    const nextBoss = isBoss ? "" : tokenDoc.uuid;
     await game.settings.set(MODULE_ID, "bossActorId", nextBoss);
     ui.notifications.info(nextBoss ? `👑 ${hud.object.actor.name} exibido como Chefe na Live!` : "Barra de Chefe removida da Live.");
     hud.clear();
@@ -946,7 +959,8 @@ Hooks.on("renderImagePopout", (app, html) => {
 Hooks.on("updateActor", (actor) => {
   const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
   const bossActorId = game.settings.get(MODULE_ID, "bossActorId");
-  if (!actorIds.includes(actor.id) && actor.id !== bossActorId) return;
+  const isBossMatch = bossActorId && (actor.id === bossActorId || actor.parent?.uuid === bossActorId || actor.uuid === bossActorId);
+  if (!actorIds.includes(actor.id) && !isBossMatch) return;
 
   const newHp = Number(actor.system?.attributes?.hp?.value ?? 0);
   const oldHp = KorujaStreamHUD.hpCache.get(actor.id);
@@ -956,6 +970,14 @@ Hooks.on("updateActor", (actor) => {
     else if (newHp > oldHp) flash[actor.id] = "heal";
   }
   KorujaStreamHUD.render(flash);
+});
+
+Hooks.on("updateToken", (tokenDoc) => {
+  const bossActorId = game.settings.get(MODULE_ID, "bossActorId");
+  if (!bossActorId) return;
+  if (tokenDoc.uuid === bossActorId || tokenDoc.actorId === bossActorId) {
+    KorujaStreamHUD.render();
+  }
 });
 
 Hooks.on("createActiveEffect", (e) => { if (e.parent?.documentName === "Actor") KorujaStreamHUD.render(); });

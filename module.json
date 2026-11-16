@@ -2,7 +2,7 @@
   "id": "koruja-stream-hud",
   "title": "Koruja Stream HUD — Overlay de Jogadores para Live",
   "description": "Overlay transparente, leve e 100% nativo para Foundry VTT v14 exibir HP, CA, condições, retrato, turno e rolagens dos jogadores no OBS Studio sem servidor externo.",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "library": false,
   "compatibility": {
     "minimum": "14",
@@ -45,7 +45,7 @@
   ],
   "url": "https://github.com/korujasedex123/koruja-stream-hud",
   "manifest": "https://github.com/korujasedex123/koruja-stream-hud/releases/latest/download/module.json",
-  "download": "https://github.com/korujasedex123/koruja-stream-hud/releases/download/v1.3.0/module.zip",
+  "download": "https://github.com/korujasedex123/koruja-stream-hud/releases/download/v1.3.1/module.zip",
   "readme": "README.md",
   "license": "LICENSE",
   "bugs": "https://github.com/korujasedex123/koruja-stream-hud/issues",
