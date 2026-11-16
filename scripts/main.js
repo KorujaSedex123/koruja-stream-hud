@@ -22,6 +22,22 @@ const ROLEPLAY_POSITIONS = {
   combat: { x: 1430, y: 874 }
 };
 
+function slugifyName(name) {
+  return (name || "heroi")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "heroi";
+}
+
+function buildVdoLinks(room, actor) {
+  const safeRoom = slugifyName(room || "SanguisEtThus");
+  const streamId = `${slugifyName(actor.name)}_${actor.id.slice(0, 5)}`;
+  const label = encodeURIComponent(actor.name);
+  return {
+    pushUrl: `https://vdo.ninja/?room=${safeRoom}&push=${streamId}&label=${label}&noaudio`,
+    viewUrl: `https://vdo.ninja/?room=${safeRoom}&view=${streamId}&cleanoutput&transparent`
+  };
+}
+
 function getEffectiveOverlayMode() {
   const urlMode = new URLSearchParams(window.location.search).get("mode");
   if (urlMode === "rp" || urlMode === "roleplay") return "builtin-roleplay";
@@ -77,6 +93,8 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const autoPanCombat = game.settings.get(MODULE_ID, "autoPanCombat");
     const cinematicHandouts = game.settings.get(MODULE_ID, "cinematicHandouts");
     const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
+    const slotConfigs = game.settings.get(MODULE_ID, "playerSlotConfigs") || {};
+    const vdoRoomName = game.settings.get(MODULE_ID, "vdoRoomName") || "SanguisEtThus";
     const savedPositions = game.settings.get(MODULE_ID, "cardPositions") || {};
 
     this.#draftPositions = foundry.utils.mergeObject(
@@ -103,6 +121,8 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       autoPanCombat,
       cinematicHandouts,
       bossActorId,
+      slotConfigs,
+      vdoRoomName,
       positions: this.#draftPositions
     };
   }
@@ -117,16 +137,32 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       const order = idx !== -1 ? idx + 1 : "";
       const hp = actor.system?.attributes?.hp;
       const ac = actor.system?.attributes?.ac?.value ?? 10;
+      const sc = context.slotConfigs?.[actor.id] || { mode: "transparent", url: "" };
       return `
-        <label class="koruja-config-row">
-          <input type="checkbox" name="actor_${actor.id}" value="${actor.id}" ${checked}>
-          <img src="${actor.img}" alt="${actor.name}">
-          <div class="koruja-config-info">
-            <strong>${actor.name}</strong>
-            <span>PV: ${hp?.value ?? 0}/${hp?.max ?? 0} | CA: ${ac}</span>
+        <div class="koruja-config-card">
+          <label class="koruja-config-row">
+            <input type="checkbox" name="actor_${actor.id}" value="${actor.id}" ${checked}>
+            <img src="${actor.img}" alt="${actor.name}">
+            <div class="koruja-config-info">
+              <strong>${actor.name}</strong>
+              <span>PV: ${hp?.value ?? 0}/${hp?.max ?? 0} | CA: ${ac}</span>
+            </div>
+            <input type="number" class="koruja-order-input" name="order_${actor.id}" value="${order}" min="1" max="6" placeholder="#">
+          </label>
+          <div class="koruja-slot-subconfig">
+            <select name="slotMode_${actor.id}" class="koruja-slot-mode" data-actor-id="${actor.id}">
+              <option value="transparent" ${sc.mode === "transparent" ? "selected" : ""}>Transparente (OBS)</option>
+              <option value="portrait" ${sc.mode === "portrait" ? "selected" : ""}>Retrato do Personagem (Sem Cam)</option>
+              <option value="iframe" ${sc.mode === "iframe" ? "selected" : ""}>Link Externo (VDO.Ninja / App)</option>
+            </select>
+            <div class="koruja-slot-url-row" style="${sc.mode === "iframe" ? "" : "display:none;"}">
+              <input type="text" name="slotUrl_${actor.id}" value="${sc.url || ""}" placeholder="URL de visualização (View)..." class="koruja-slot-url-input">
+              <button type="button" class="koruja-vdo-gen-btn" data-actor-id="${actor.id}" title="Gerar link VDO.Ninja e copiar convite do jogador com nome do personagem">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> VDO
+              </button>
+            </div>
           </div>
-          <input type="number" class="koruja-order-input" name="order_${actor.id}" value="${order}" min="1" max="6" placeholder="#">
-        </label>
+        </div>
       `;
     }).join("");
 
@@ -147,7 +183,11 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       <div class="koruja-editor-grid">
         <!-- Coluna Esquerda: Jogadores e Opções -->
         <div class="koruja-editor-sidebar">
-          <div class="koruja-section-title"><i class="fa-solid fa-users"></i> Jogadores (1 a 6)</div>
+          <div class="koruja-section-title"><i class="fa-solid fa-users"></i> Jogadores (1 a 6) & Molduras</div>
+          <div class="koruja-vdo-room-row">
+            <label>Sala VDO.Ninja:</label>
+            <input type="text" name="vdoRoomName" id="koruja-vdo-room" value="${context.vdoRoomName}" placeholder="SanguisEtThus">
+          </div>
           <div class="koruja-config-list">
             ${charRows || "<p class='notes'>Nenhum personagem (Character) encontrado.</p>"}
           </div>
@@ -306,6 +346,34 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     testCritBtn?.addEventListener("click", () => sendTestBanner("crit"));
     testFumbleBtn?.addEventListener("click", () => sendTestBanner("fumble"));
 
+    // Alterna visibilidade do campo URL por jogador e gera links VDO.Ninja com nome do personagem
+    container.querySelectorAll(".koruja-slot-mode").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const card = sel.closest(".koruja-config-card");
+        const urlRow = card?.querySelector(".koruja-slot-url-row");
+        if (urlRow) urlRow.style.display = sel.value === "iframe" ? "flex" : "none";
+      });
+    });
+
+    container.querySelectorAll(".koruja-vdo-gen-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const actorId = btn.dataset.actorId;
+        const actor = game.actors.get(actorId);
+        if (!actor) return;
+        const room = container.querySelector("#koruja-vdo-room")?.value || "SanguisEtThus";
+        const { pushUrl, viewUrl } = buildVdoLinks(room, actor);
+        const card = btn.closest(".koruja-config-card");
+        const urlInput = card?.querySelector(".koruja-slot-url-input");
+        if (urlInput) urlInput.value = viewUrl;
+        try {
+          await navigator.clipboard.writeText(pushUrl);
+          ui.notifications.info(`Link de câmera para ${actor.name} copiado! Envie no Discord para o jogador entrar já com o nome do personagem.`);
+        } catch {
+          ui.notifications.info(`Link gerado! Convite do jogador: ${pushUrl}`);
+        }
+      });
+    });
+
     modeSelect?.addEventListener("change", () => {
       const val = modeSelect.value;
       customGroup.style.display = val === "custom-image" ? "" : "none";
@@ -383,12 +451,20 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
   static async #onSubmit(event, form, formData) {
     const data = formData.object;
     const selected = [];
+    const slotConfigs = {};
 
     for (const [key, val] of Object.entries(data)) {
       if (key.startsWith("actor_") && val) {
         const actorId = key.replace("actor_", "");
         const orderVal = Number(data[`order_${actorId}`]) || 99;
         selected.push({ id: actorId, order: orderVal });
+      }
+      if (key.startsWith("slotMode_")) {
+        const actorId = key.replace("slotMode_", "");
+        slotConfigs[actorId] = {
+          mode: val || "transparent",
+          url: (data[`slotUrl_${actorId}`] || "").trim()
+        };
       }
     }
 
@@ -403,6 +479,8 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     }
 
     await game.settings.set(MODULE_ID, "partyActorIds", orderedIds);
+    await game.settings.set(MODULE_ID, "playerSlotConfigs", slotConfigs);
+    await game.settings.set(MODULE_ID, "vdoRoomName", (data.vdoRoomName || "SanguisEtThus").trim());
     await game.settings.set(MODULE_ID, "bossActorId", data.bossActorId || "");
     await game.settings.set(MODULE_ID, "overlayMode", data.overlayMode || "builtin-sanguis");
     await game.settings.set(MODULE_ID, "customOverlayImg", data.customOverlayImg || "");
@@ -422,6 +500,8 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
  */
 class KorujaStreamHUD {
   static container = null;
+  static mediaLayer = null;
+  static lastMediaSig = "";
   static hpCache = new Map();
   static rollTimers = new Map();
   static chatHistory = [];
@@ -445,6 +525,10 @@ class KorujaStreamHUD {
     }
 
     if (!this.container) {
+      this.mediaLayer = document.createElement("div");
+      this.mediaLayer.id = "koruja-media-layer";
+      document.body.appendChild(this.mediaLayer);
+
       this.container = document.createElement("div");
       this.container.id = "koruja-stream-hud";
       document.body.appendChild(this.container);
@@ -476,6 +560,11 @@ class KorujaStreamHUD {
     if (this.broadcastChannel) {
       this.broadcastChannel.close();
       this.broadcastChannel = null;
+    }
+    if (this.mediaLayer) {
+      this.mediaLayer.remove();
+      this.mediaLayer = null;
+      this.lastMediaSig = "";
     }
     if (this.container) {
       this.container.remove();
@@ -799,6 +888,55 @@ class KorujaStreamHUD {
     this.container.innerHTML = `${backdropHtml}${bossHtml}${cardsHtml}${chatHtml}${combatHtml}`;
     if (this.epicBannerEl) this.container.appendChild(this.epicBannerEl);
     if (this.spotlightEl) this.container.appendChild(this.spotlightEl);
+
+    this.syncMediaLayer(actors, overlayMode, activeCombatantActorId);
+  }
+
+  static syncMediaLayer(actors, overlayMode, activeCombatantActorId) {
+    if (!this.mediaLayer) return;
+    if (overlayMode !== "builtin-sanguis" && overlayMode !== "builtin-roleplay") {
+      this.mediaLayer.innerHTML = "";
+      this.lastMediaSig = "";
+      return;
+    }
+
+    const slotConfigs = game.settings.get(MODULE_ID, "playerSlotConfigs") || {};
+    const prefix = overlayMode === "builtin-roleplay" ? "koruja-rp" : "koruja-cutout";
+
+    // Atualiza apenas se mudar os jogadores, URLs ou modo (para nunca recarregar iframes ao vivo!)
+    const sig = JSON.stringify({
+      overlayMode,
+      slots: actors.map((a, i) => ({ id: a.id, img: a.img, slot: i + 1, cfg: slotConfigs[a.id] || {} }))
+    });
+
+    if (sig !== this.lastMediaSig) {
+      this.lastMediaSig = sig;
+      this.mediaLayer.innerHTML = actors.map((actor, i) => {
+        const cfg = slotConfigs[actor.id] || { mode: "transparent", url: "" };
+        if (cfg.mode === "transparent") return "";
+        const slotCls = `${prefix}-p${i + 1}`;
+        if (cfg.mode === "portrait") {
+          return `
+            <div class="koruja-media-slot ${slotCls}" data-actor-id="${actor.id}">
+              <div class="koruja-slot-portrait" style="background-image: url('${actor.img}');"></div>
+            </div>
+          `;
+        }
+        if (cfg.mode === "iframe" && cfg.url) {
+          return `
+            <div class="koruja-media-slot ${slotCls}" data-actor-id="${actor.id}">
+              <iframe class="koruja-slot-iframe" src="${cfg.url}" allow="autoplay; camera; microphone" frameborder="0"></iframe>
+            </div>
+          `;
+        }
+        return "";
+      }).join("");
+    }
+
+    // Atualiza destaque de turno nos retratos sem destruir os iframes
+    this.mediaLayer.querySelectorAll(".koruja-media-slot").forEach(el => {
+      el.classList.toggle("is-turn", el.dataset.actorId === activeCombatantActorId);
+    });
   }
 
   static detectCriticalOrFumble(roll) {
@@ -924,6 +1062,8 @@ class KorujaStreamHUD {
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "partyActorIds", { scope: "world", config: false, type: Array, default: [], onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "playerSlotConfigs", { scope: "world", config: false, type: Object, default: {}, onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "vdoRoomName", { scope: "world", config: false, type: String, default: "SanguisEtThus" });
   game.settings.register(MODULE_ID, "bossActorId", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "overlayMode", { scope: "world", config: false, type: String, default: "builtin-sanguis", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "customOverlayImg", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });

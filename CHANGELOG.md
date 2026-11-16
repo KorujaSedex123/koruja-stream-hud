@@ -2,6 +2,13 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.6.0] - 2026-11-16
+
+### Adicionado
+- **Preenchimento Inteligente das 6 Molduras de Câmera:** Cada jogador pode ser configurado individualmente como **Transparente (OBS)**, **Retrato do Personagem (Sem Webcam)** ou **Link Externo Embutido (`<iframe>` VDO.Ninja / App)**.
+- **Gerador de Sala VDO.Ninja em 1 Clique:** Botão **VDO** por personagem que preenche automaticamente o link da live e copia o convite do jogador já com o **nome do personagem** embutido (`&label=Nome`), sem configurações extras!
+- **Camada Persistente de Mídia (`#koruja-media-layer`):** Evita que as câmeras/iframes recarreguem quando o PV ou combate atualiza.
+
 ## [1.5.0] - 2026-11-16
 
 ### Adicionado
