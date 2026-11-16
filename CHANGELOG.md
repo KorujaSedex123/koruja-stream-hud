@@ -2,6 +2,11 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.4.0] - 2026-11-16
+
+### Alterado
+- **Suporte Completo para 6 Jogadores:** Grade inferior da moldura embutida e do Editor Visual Drag & Drop reajustada milimetricamente para 6 câmeras/cards (`228x154` cada, em `1920x1080`).
+
 ## [1.3.0] - 2026-11-16
 
 ### Adicionado

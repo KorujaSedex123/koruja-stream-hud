@@ -161,10 +161,12 @@ body.koruja-stream-mode-active #board {
 
 .koruja-cutout-foundry { top: 56px; left: 20px; width: 1420px; height: 798px; }
 .koruja-cutout-gm { top: 56px; left: 1460px; width: 440px; height: 258px; }
-.koruja-cutout-p1 { top: 874px; left: 20px; width: 340px; height: 154px; }
-.koruja-cutout-p2 { top: 874px; left: 380px; width: 340px; height: 154px; }
-.koruja-cutout-p3 { top: 874px; left: 740px; width: 340px; height: 154px; }
-.koruja-cutout-p4 { top: 874px; left: 1100px; width: 340px; height: 154px; }
+.koruja-cutout-p1 { top: 874px; left: 20px; width: 228px; height: 154px; }
+.koruja-cutout-p2 { top: 874px; left: 258px; width: 228px; height: 154px; }
+.koruja-cutout-p3 { top: 874px; left: 496px; width: 228px; height: 154px; }
+.koruja-cutout-p4 { top: 874px; left: 734px; width: 228px; height: 154px; }
+.koruja-cutout-p5 { top: 874px; left: 972px; width: 228px; height: 154px; }
+.koruja-cutout-p6 { top: 874px; left: 1210px; width: 228px; height: 154px; }
 
 .cutout-tag {
   position: absolute;
@@ -307,7 +309,7 @@ body.koruja-stream-mode-active #board {
 
 .koruja-player-card {
   position: absolute;
-  width: 340px;
+  width: 228px;
   transition: transform 0.25s ease, filter 0.3s ease;
 }
 
@@ -696,11 +698,13 @@ body.koruja-stream-mode-active #board {
 .mini-header { top: 0; left: 0; width: 800px; height: 20px; background: rgba(0,0,0,0.6); }
 .mini-slot-foundry { top: 23px; left: 8px; width: 592px; height: 332px; }
 .mini-slot-gm { top: 23px; left: 608px; width: 183px; height: 107px; }
-.mini-cam { top: 364px; width: 141px; height: 64px; }
+.mini-cam { top: 364px; width: 95px; height: 64px; }
 .mini-cam.p1 { left: 8px; }
-.mini-cam.p2 { left: 158px; }
-.mini-cam.p3 { left: 308px; }
-.mini-cam.p4 { left: 458px; }
+.mini-cam.p2 { left: 108px; }
+.mini-cam.p3 { left: 207px; }
+.mini-cam.p4 { left: 306px; }
+.mini-cam.p5 { left: 405px; }
+.mini-cam.p6 { left: 504px; }
 
 .koruja-drag-box {
   position: absolute;
@@ -710,7 +714,7 @@ body.koruja-stream-mode-active #board {
   box-shadow: 0 3px 10px rgba(0,0,0,0.8);
 }
 .koruja-drag-box:active { cursor: grabbing; outline: 2px solid #fff; }
-.drag-player { width: 141px; height: 26px; background: rgba(139, 0, 0, 0.88); border: 1px solid #d4af37; }
+.drag-player { width: 95px; height: 24px; font-size: 10px; background: rgba(139, 0, 0, 0.88); border: 1px solid #d4af37; }
 .drag-chat { width: 183px; height: 216px; background: rgba(25, 35, 65, 0.72); border: 1px solid #60a5fa; }
 .drag-combat { width: 183px; height: 64px; background: rgba(75, 25, 25, 0.78); border: 1px solid #f59e0b; }
 

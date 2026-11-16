@@ -2,9 +2,11 @@ const MODULE_ID = "koruja-stream-hud";
 
 const DEFAULT_POSITIONS = {
   p1: { x: 20, y: 976 },
-  p2: { x: 380, y: 976 },
-  p3: { x: 740, y: 976 },
-  p4: { x: 1100, y: 976 },
+  p2: { x: 258, y: 976 },
+  p3: { x: 496, y: 976 },
+  p4: { x: 734, y: 976 },
+  p5: { x: 972, y: 976 },
+  p6: { x: 1210, y: 976 },
   chat: { x: 1460, y: 334 },
   combat: { x: 1460, y: 874 }
 };
@@ -105,7 +107,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             <strong>${actor.name}</strong>
             <span>PV: ${hp?.value ?? 0}/${hp?.max ?? 0} | CA: ${ac}</span>
           </div>
-          <input type="number" class="koruja-order-input" name="order_${actor.id}" value="${order}" min="1" max="4" placeholder="#">
+          <input type="number" class="koruja-order-input" name="order_${actor.id}" value="${order}" min="1" max="6" placeholder="#">
         </label>
       `;
     }).join("");
@@ -127,7 +129,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       <div class="koruja-editor-grid">
         <!-- Coluna Esquerda: Jogadores e Opções -->
         <div class="koruja-editor-sidebar">
-          <div class="koruja-section-title"><i class="fa-solid fa-users"></i> Jogadores (1 a 4)</div>
+          <div class="koruja-section-title"><i class="fa-solid fa-users"></i> Jogadores (1 a 6)</div>
           <div class="koruja-config-list">
             ${charRows || "<p class='notes'>Nenhum personagem (Character) encontrado.</p>"}
           </div>
@@ -206,12 +208,14 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
               <div class="mini-cam p2">CAM 2</div>
               <div class="mini-cam p3">CAM 3</div>
               <div class="mini-cam p4">CAM 4</div>
+              <div class="mini-cam p5">CAM 5</div>
+              <div class="mini-cam p6">CAM 6</div>
             </div>
             <img class="koruja-stage-bg-custom" id="koruja-stage-bg-custom" src="${context.customOverlayImg}" style="${context.overlayMode === "custom-image" && context.customOverlayImg ? "" : "display:none;"}">
 
-            ${["p1", "p2", "p3", "p4"].map((key, i) => `
+            ${["p1", "p2", "p3", "p4", "p5", "p6"].map((key, i) => `
               <div class="koruja-drag-box drag-player" data-key="${key}" style="left:${Math.round(pos[key].x * SCALE)}px; top:${Math.round(pos[key].y * SCALE)}px;">
-                <i class="fa-solid fa-grip-vertical"></i> Jogador ${i + 1}
+                <i class="fa-solid fa-grip-vertical"></i> J${i + 1}
               </div>
             `).join("")}
 
@@ -510,7 +514,7 @@ class KorujaStreamHUD {
     );
 
     const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
-    const actors = actorIds.slice(0, 4).map(id => game.actors.get(id)).filter(Boolean);
+    const actors = actorIds.slice(0, 6).map(id => game.actors.get(id)).filter(Boolean);
     const activeCombatant = game.combat?.started ? game.combat.combatant : null;
     const activeCombatantActorId = activeCombatant?.actor?.id || null;
 
@@ -535,6 +539,8 @@ class KorujaStreamHUD {
           <div class="koruja-cutout koruja-cutout-p2"></div>
           <div class="koruja-cutout koruja-cutout-p3"></div>
           <div class="koruja-cutout koruja-cutout-p4"></div>
+          <div class="koruja-cutout koruja-cutout-p5"></div>
+          <div class="koruja-cutout koruja-cutout-p6"></div>
         </div>
       `;
     } else if (overlayMode === "custom-image" && customOverlayImg) {
