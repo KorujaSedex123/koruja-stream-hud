@@ -22,6 +22,15 @@ const ROLEPLAY_POSITIONS = {
   combat: { x: 1430, y: 874 }
 };
 
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function slugifyName(name) {
   return (name || "heroi")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -92,6 +101,10 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
     const autoPanCombat = game.settings.get(MODULE_ID, "autoPanCombat");
     const cinematicHandouts = game.settings.get(MODULE_ID, "cinematicHandouts");
+    const autoLocationBanner = game.settings.get(MODULE_ID, "autoLocationBanner");
+    const locationSubtitle = game.settings.get(MODULE_ID, "locationSubtitle") || "Sanguis et Thus";
+    const showQuestBox = game.settings.get(MODULE_ID, "showQuestBox");
+    const customQuestText = game.settings.get(MODULE_ID, "customQuestText") || "";
     const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
     const slotConfigs = game.settings.get(MODULE_ID, "playerSlotConfigs") || {};
     const vdoRoomName = game.settings.get(MODULE_ID, "vdoRoomName") || "SanguisEtThus";
@@ -120,6 +133,11 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       showCombatBox,
       autoPanCombat,
       cinematicHandouts,
+      autoLocationBanner,
+      locationSubtitle,
+      activeSceneName: game.scenes?.active?.name || "",
+      showQuestBox,
+      customQuestText,
       bossActorId,
       slotConfigs,
       vdoRoomName,
@@ -236,6 +254,28 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             <input type="checkbox" name="cinematicHandouts" ${context.cinematicHandouts ? "checked" : ""}>
             <span>Vitrine Cinematográfica de Imagens/NPCs</span>
           </label>
+          <label class="koruja-check-row">
+            <input type="checkbox" name="autoLocationBanner" ${context.autoLocationBanner ? "checked" : ""}>
+            <span>Banner de Localização ao Trocar Cena</span>
+          </label>
+          <label class="koruja-check-row">
+            <input type="checkbox" name="showQuestBox" ${context.showQuestBox ? "checked" : ""}>
+            <span>Exibir Missão / Objetivo na Tela</span>
+          </label>
+
+          <div class="koruja-section-title" style="margin-top: 6px;"><i class="fa-solid fa-scroll"></i> Missão / Objetivo na Tela</div>
+          <div class="koruja-editor-subbox koruja-quest-config">
+            <input type="text" class="koruja-editor-input" name="customQuestText" id="koruja-custom-quest-input" value="${escapeHtml(context.customQuestText)}" placeholder="Vazio = lê quest ativa do FeyHub...">
+          </div>
+
+          <div class="koruja-section-title" style="margin-top: 6px;"><i class="fa-solid fa-landmark"></i> Banner de Localização</div>
+          <div class="koruja-editor-subbox koruja-location-config">
+            <input type="text" class="koruja-editor-input" name="locationTitle" id="koruja-location-title-input" value="${escapeHtml(context.activeSceneName)}" placeholder="Título (ex: Catedral das Cinzas)">
+            <input type="text" class="koruja-editor-input" name="locationSubtitle" id="koruja-location-subtitle-input" value="${escapeHtml(context.locationSubtitle)}" placeholder="Subtítulo (ex: Sanguis et Thus)">
+            <button type="button" class="koruja-test-btn test-location" id="koruja-test-location">
+              🏰 Exibir Localização
+            </button>
+          </div>
 
           <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
@@ -319,6 +359,9 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const openTabBtn = container.querySelector("#koruja-open-live-tab");
     const testCritBtn = container.querySelector("#koruja-test-crit");
     const testFumbleBtn = container.querySelector("#koruja-test-fumble");
+    const testLocationBtn = container.querySelector("#koruja-test-location");
+    const locationTitleInput = container.querySelector("#koruja-location-title-input");
+    const locationSubtitleInput = container.querySelector("#koruja-location-subtitle-input");
     const hiddenJson = container.querySelector("#koruja-positions-json");
     const stage = container.querySelector("#koruja-preview-stage");
 
@@ -345,6 +388,17 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
 
     testCritBtn?.addEventListener("click", () => sendTestBanner("crit"));
     testFumbleBtn?.addEventListener("click", () => sendTestBanner("fumble"));
+
+    testLocationBtn?.addEventListener("click", () => {
+      const title = (locationTitleInput?.value || game.scenes?.active?.name || "Sanguis et Thus").trim();
+      const subtitle = (locationSubtitleInput?.value || "Sanguis et Thus").trim();
+      if (typeof BroadcastChannel !== "undefined") {
+        const ch = new BroadcastChannel(MODULE_ID);
+        ch.postMessage({ action: "show-location-banner", title, subtitle });
+        ch.close();
+      }
+      ui.notifications.info(`🏰 Banner de localização "${title}" enviado para a aba da Live!`);
+    });
 
     // Alterna visibilidade do campo URL por jogador e gera links VDO.Ninja com nome do personagem
     container.querySelectorAll(".koruja-slot-mode").forEach(sel => {
@@ -488,6 +542,10 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     await game.settings.set(MODULE_ID, "showCombatBox", Boolean(data.showCombatBox));
     await game.settings.set(MODULE_ID, "autoPanCombat", Boolean(data.autoPanCombat));
     await game.settings.set(MODULE_ID, "cinematicHandouts", Boolean(data.cinematicHandouts));
+    await game.settings.set(MODULE_ID, "autoLocationBanner", Boolean(data.autoLocationBanner));
+    await game.settings.set(MODULE_ID, "locationSubtitle", (data.locationSubtitle || "Sanguis et Thus").trim());
+    await game.settings.set(MODULE_ID, "showQuestBox", Boolean(data.showQuestBox));
+    await game.settings.set(MODULE_ID, "customQuestText", (data.customQuestText || "").trim());
     await game.settings.set(MODULE_ID, "cardPositions", parsedPositions);
 
     ui.notifications.info(`Stream HUD salvo (${orderedIds.length} jogadores).`);
@@ -507,6 +565,8 @@ class KorujaStreamHUD {
   static chatHistory = [];
   static epicBannerEl = null;
   static epicBannerTimer = null;
+  static locationBannerEl = null;
+  static locationBannerTimer = null;
   static spotlightEl = null;
   static spotlightTimer = null;
   static broadcastChannel = null;
@@ -539,6 +599,8 @@ class KorujaStreamHUD {
       this.broadcastChannel.onmessage = (ev) => {
         if (ev.data?.action === "test-epic-banner") {
           this.showEpicBanner(ev.data.type, { name: ev.data.name, img: ev.data.img });
+        } else if (ev.data?.action === "show-location-banner") {
+          this.showLocationBanner({ title: ev.data.title, subtitle: ev.data.subtitle });
         }
       };
     }
@@ -554,8 +616,10 @@ class KorujaStreamHUD {
   static destroy() {
     document.body.classList.remove("koruja-stream-mode-active");
     if (this.epicBannerTimer) clearTimeout(this.epicBannerTimer);
+    if (this.locationBannerTimer) clearTimeout(this.locationBannerTimer);
     if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
     this.epicBannerEl = null;
+    this.locationBannerEl = null;
     this.spotlightEl = null;
     if (this.broadcastChannel) {
       this.broadcastChannel.close();
@@ -601,6 +665,43 @@ class KorujaStreamHUD {
     return { author, text: truncated, type: "" };
   }
 
+  static #resolveQuestText() {
+    const custom = (game.settings.get(MODULE_ID, "customQuestText") || "").trim();
+    if (custom) return custom;
+
+    try {
+      const feyJournal = game.journal?.getName?.("FeyHub");
+      const journalQuests = feyJournal?.getFlag?.("feyhub", "quests") || feyJournal?.flags?.feyhub?.quests;
+      if (Array.isArray(journalQuests)) {
+        const active = journalQuests.find(q => q && (q.status === "active" || q.state === "active" || q.active === true));
+        const text = active?.title || active?.name || active?.text || "";
+        if (text) return String(text).trim();
+      }
+
+      if (feyJournal?.pages?.contents) {
+        const activePage = feyJournal.pages.contents.find(p =>
+          p?.flags?.feyhub?.status === "active" || p?.flags?.feyhub?.active === true
+        );
+        if (activePage?.name) return String(activePage.name).trim();
+      }
+
+      for (const [ns, key] of [["feyhub", "quests"], ["feyhub", "activeQuest"], ["fey-hub", "quests"], ["fey-hub", "activeQuest"]]) {
+        if (!game.settings.settings?.has?.(`${ns}.${key}`)) continue;
+        const val = game.settings.get(ns, key);
+        if (typeof val === "string" && val.trim()) return val.trim();
+        if (Array.isArray(val)) {
+          const active = val.find(q => q && (q.status === "active" || q.state === "active" || q.active === true));
+          const text = active?.title || active?.name || active?.text || "";
+          if (text) return String(text).trim();
+        }
+      }
+    } catch (err) {
+      console.warn("Koruja Stream HUD: erro ao ler quest do FeyHub:", err);
+    }
+
+    return "";
+  }
+
   static render(flashEvents = {}) {
     if (!this.shouldRender()) {
       this.destroy();
@@ -619,6 +720,7 @@ class KorujaStreamHUD {
     const showConditions = game.settings.get(MODULE_ID, "showConditions");
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = isRoleplayMode ? false : game.settings.get(MODULE_ID, "showCombatBox");
+    const showQuestBox = game.settings.get(MODULE_ID, "showQuestBox");
     const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
 
     const pos = isRoleplayMode
@@ -825,6 +927,35 @@ class KorujaStreamHUD {
         if (badges) conditionsHtml = `<div class="koruja-card-conditions">${badges}</div>`;
       }
 
+      // Corrupção da Malha Arcana ou fallback para Orbes de Magia
+      let resourceHtml = "";
+      const malhaActive = game.modules.get("malha-arcana")?.active;
+      const corruption = Number(actor.getFlag("malha-arcana", "corruption") ?? 0);
+      if (malhaActive || corruption > 0) {
+        const highCls = corruption >= 10 ? "high-corruption" : "";
+        resourceHtml = `<div class="koruja-corruption-pill ${highCls}" title="Corrupção da Malha Arcana"><i class="fa-solid fa-burst"></i> Corrupção: ${corruption}</div>`;
+      } else {
+        const spells = actor.system?.spells || {};
+        let totalMax = 0;
+        let totalVal = 0;
+        for (const [key, slot] of Object.entries(spells)) {
+          if (!slot || typeof slot !== "object") continue;
+          if (key === "pact" || /^spell\d+$/.test(key)) {
+            const m = Number(slot.max) || 0;
+            const v = Math.max(0, Math.min(m, Number(slot.value) || 0));
+            totalMax += m;
+            totalVal += v;
+          }
+        }
+        if (totalMax > 0) {
+          const cap = Math.min(totalMax, 12);
+          const orbs = Array.from({ length: cap }, (_, i) =>
+            `<span class="spell-orb ${i < totalVal ? "available" : "spent"}"></span>`
+          ).join("");
+          resourceHtml = `<div class="koruja-spell-orbs" title="Espaços de Magia: ${totalVal}/${totalMax}">${orbs}${totalMax > 12 ? `<span class="spell-orb-more">+${totalMax - 12}</span>` : ""}</div>`;
+        }
+      }
+
       return `
         <div class="koruja-player-card ${isTurn ? "is-active-turn" : ""} ${isDown ? "is-down" : ""} ${isConcentrating ? "is-concentrating" : ""} ${flashClass}"
              style="left: ${coords.x}px; top: ${coords.y}px;" data-actor-id="${actor.id}">
@@ -845,6 +976,7 @@ class KorujaStreamHUD {
                 </div>
               </div>
               ${barOrDeathHtml}
+              ${resourceHtml}
               ${conditionsHtml}
             </div>
           </div>
@@ -870,23 +1002,58 @@ class KorujaStreamHUD {
       `;
     }
 
-    // 5. Caixa de Rodada / Turno Ativo
+    // 5. Caixa de Rodada / Turno Ativo + Próximo Turno
     let combatHtml = "";
     if (showCombatBox) {
       const combatCoords = pos.combat || DEFAULT_POSITIONS.combat;
       const roundText = game.combat?.started ? `RODADA ${String(game.combat.round).padStart(2, "0")}` : "EXPLORAÇÃO";
       const turnText = game.combat?.started && activeCombatant ? `Turno: ${activeCombatant.name}` : "Fora de Combate";
+
+      let nextTurnHtml = "";
+      if (game.combat?.started && Array.isArray(game.combat.turns) && game.combat.turns.length > 0) {
+        const turns = game.combat.turns;
+        const curIdx = Number.isInteger(game.combat.turn) ? game.combat.turn : -1;
+        let nextCombatant = null;
+        for (let offset = 1; offset <= turns.length; offset++) {
+          const candidate = turns[(curIdx + offset) % turns.length];
+          if (!candidate) continue;
+          if (candidate.hidden || candidate.isDefeated || candidate.token?.hidden) continue;
+          if (candidate.id === activeCombatant?.id && turns.length > 1) continue;
+          nextCombatant = candidate;
+          break;
+        }
+        if (nextCombatant) {
+          nextTurnHtml = `<div class="combat-next">A seguir: ${escapeHtml(nextCombatant.name)}</div>`;
+        }
+      }
+
       combatHtml = `
         <div class="koruja-combat-box" style="left: ${combatCoords.x}px; top: ${combatCoords.y}px;">
           <div class="combat-label">INICIATIVA</div>
           <div class="combat-round">${roundText}</div>
           <div class="combat-turn">${turnText}</div>
+          ${nextTurnHtml}
         </div>
       `;
     }
 
-    this.container.innerHTML = `${backdropHtml}${bossHtml}${cardsHtml}${chatHtml}${combatHtml}`;
+    // 6. Objetivo / Missão Atual na Tela
+    let questHtml = "";
+    if (showQuestBox) {
+      const questText = this.#resolveQuestText();
+      if (questText) {
+        questHtml = `
+          <div class="koruja-quest-box">
+            <div class="quest-label">📜 OBJETIVO ATUAL</div>
+            <div class="quest-text">${escapeHtml(questText)}</div>
+          </div>
+        `;
+      }
+    }
+
+    this.container.innerHTML = `${backdropHtml}${questHtml}${bossHtml}${cardsHtml}${chatHtml}${combatHtml}`;
     if (this.epicBannerEl) this.container.appendChild(this.epicBannerEl);
+    if (this.locationBannerEl) this.container.appendChild(this.locationBannerEl);
     if (this.spotlightEl) this.container.appendChild(this.spotlightEl);
 
     this.syncMediaLayer(actors, overlayMode, activeCombatantActorId);
@@ -992,6 +1159,35 @@ class KorujaStreamHUD {
     }, 4500);
   }
 
+  static showLocationBanner({ title = "", subtitle = "Sanguis et Thus" } = {}) {
+    if (!this.shouldRender() || !this.container) return;
+
+    if (this.locationBannerTimer) clearTimeout(this.locationBannerTimer);
+    if (this.locationBannerEl) this.locationBannerEl.remove();
+
+    const safeTitle = String(title || game.scenes?.active?.name || "Sanguis et Thus").trim();
+    const safeSubtitle = String(subtitle ?? "Sanguis et Thus").trim();
+
+    const banner = document.createElement("div");
+    banner.className = "koruja-location-banner";
+    banner.innerHTML = `
+      <div class="location-title">${escapeHtml(safeTitle.toUpperCase())}</div>
+      <div class="location-line"></div>
+      ${safeSubtitle ? `<div class="location-subtitle">${escapeHtml(safeSubtitle)}</div>` : ""}
+    `;
+
+    this.locationBannerEl = banner;
+    this.container.appendChild(banner);
+
+    this.locationBannerTimer = setTimeout(() => {
+      if (this.locationBannerEl === banner) {
+        banner.remove();
+        this.locationBannerEl = null;
+      }
+      this.locationBannerTimer = null;
+    }, 4500);
+  }
+
   static showSpotlight({ src = "", title = "" } = {}) {
     if (!this.shouldRender() || !this.container || !src) return;
 
@@ -1071,6 +1267,10 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "showCombatBox", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "autoPanCombat", { scope: "world", config: true, name: "Câmera Automática no Combate", type: Boolean, default: true });
   game.settings.register(MODULE_ID, "cinematicHandouts", { scope: "world", config: true, name: "Vitrine Cinematográfica de Imagens/NPCs", type: Boolean, default: true });
+  game.settings.register(MODULE_ID, "autoLocationBanner", { scope: "world", config: true, name: "Banner Automático de Localização", type: Boolean, default: true });
+  game.settings.register(MODULE_ID, "locationSubtitle", { scope: "world", config: false, type: String, default: "Sanguis et Thus" });
+  game.settings.register(MODULE_ID, "showQuestBox", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "customQuestText", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "cardPositions", { scope: "world", config: false, type: Object, default: DEFAULT_POSITIONS, onChange: () => KorujaStreamHUD.render() });
 
   game.settings.register(MODULE_ID, "streamUser", {
@@ -1110,7 +1310,16 @@ Hooks.once("init", () => {
     openConfig: () => new StreamPartyConfigApp().render({ force: true }),
     refresh: () => KorujaStreamHUD.render(),
     setBoss: (actorId) => game.settings.set(MODULE_ID, "bossActorId", actorId || ""),
-    setMode: (mode) => game.settings.set(MODULE_ID, "overlayMode", mode || "builtin-sanguis")
+    setMode: (mode) => game.settings.set(MODULE_ID, "overlayMode", mode || "builtin-sanguis"),
+    showLocation: ({ title, subtitle } = {}) => {
+      if (KorujaStreamHUD.shouldRender()) {
+        KorujaStreamHUD.showLocationBanner({ title, subtitle });
+      } else if (typeof BroadcastChannel !== "undefined") {
+        const ch = new BroadcastChannel(MODULE_ID);
+        ch.postMessage({ action: "show-location-banner", title, subtitle });
+        ch.close();
+      }
+    }
   };
 });
 
@@ -1119,6 +1328,12 @@ Hooks.once("ready", () => KorujaStreamHUD.init());
 Hooks.on("canvasReady", () => {
   if (!KorujaStreamHUD.shouldRender()) return;
   KorujaStreamHUD.render();
+  if (game.settings.get(MODULE_ID, "autoLocationBanner")) {
+    const scene = game.scenes?.active;
+    const title = scene?.name || "";
+    const subtitle = scene?.getFlag?.(MODULE_ID, "subtitle") || game.settings.get(MODULE_ID, "locationSubtitle") || "Sanguis et Thus";
+    if (title) KorujaStreamHUD.showLocationBanner({ title, subtitle });
+  }
   setTimeout(() => window.dispatchEvent(new Event("resize")), 250);
 });
 

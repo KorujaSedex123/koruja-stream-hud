@@ -2,6 +2,14 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.7.0] - 2026-11-16
+
+### Adicionado
+- **Banner Cinematográfico de Localização (`.koruja-location-banner`):** Título em caixa alta dourada, linha divisória animada e subtítulo itálico exibidos por 4.5s no centro do mapa, disparados automaticamente em `canvasReady` (setting `autoLocationBanner`), via `game.korujaStreamHud.showLocation({ title, subtitle })` ou pelo botão **🏰 Exibir Localização** no Editor Visual (`BroadcastChannel`).
+- **Objetivo / Missão Atual na Tela (`.koruja-quest-box`):** Card discreto no canto superior esquerdo do mapa (`showQuestBox`, `customQuestText`) com fallback automático para a primeira quest ativa do **FeyHub**.
+- **Corrupção da Malha Arcana (`.koruja-corruption-pill`) & Spell Orbs (`.koruja-spell-orbs`):** Indicador de corrupção nos cards dos jogadores (com alerta carmesim pulsante `.high-corruption` quando `>= 10`) e fallback para orbes de espaços de magia quando o módulo `malha-arcana` não estiver ativo.
+- **Próximo Turno na Iniciativa (`.combat-next`):** Exibição discreta do próximo combatente visível (`A seguir: ...`) logo abaixo do turno atual na caixa de combate.
+
 ## [1.6.0] - 2026-11-16
 
 ### Adicionado
