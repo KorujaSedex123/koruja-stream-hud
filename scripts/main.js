@@ -99,6 +99,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const customOverlayImg = game.settings.get(MODULE_ID, "customOverlayImg") || "";
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
+    const showMusicTracker = game.settings.get(MODULE_ID, "showMusicTracker");
     const autoPanCombat = game.settings.get(MODULE_ID, "autoPanCombat");
     const autoCenterInterval = Number(game.settings.get(MODULE_ID, "autoCenterInterval")) || 0;
     const cinematicHandouts = game.settings.get(MODULE_ID, "cinematicHandouts");
@@ -132,6 +133,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       customOverlayImg,
       showChatFeed,
       showCombatBox,
+      showMusicTracker,
       autoPanCombat,
       autoCenterInterval,
       cinematicHandouts,
@@ -247,6 +249,10 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
           <label class="koruja-check-row">
             <input type="checkbox" name="showCombatBox" ${context.showCombatBox ? "checked" : ""}>
             <span>Caixa de Rodada / Turno</span>
+          </label>
+          <label class="koruja-check-row">
+            <input type="checkbox" name="showMusicTracker" ${context.showMusicTracker ? "checked" : ""}>
+            <span>Tracker de Música (Foundry Playlists)</span>
           </label>
           <label class="koruja-check-row">
             <input type="checkbox" name="autoPanCombat" ${context.autoPanCombat ? "checked" : ""}>
@@ -552,6 +558,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     await game.settings.set(MODULE_ID, "customOverlayImg", data.customOverlayImg || "");
     await game.settings.set(MODULE_ID, "showChatFeed", Boolean(data.showChatFeed));
     await game.settings.set(MODULE_ID, "showCombatBox", Boolean(data.showCombatBox));
+    await game.settings.set(MODULE_ID, "showMusicTracker", Boolean(data.showMusicTracker));
     await game.settings.set(MODULE_ID, "autoPanCombat", Boolean(data.autoPanCombat));
     await game.settings.set(MODULE_ID, "autoCenterInterval", Number(data.autoCenterInterval) || 0);
     await game.settings.set(MODULE_ID, "cinematicHandouts", Boolean(data.cinematicHandouts));
@@ -767,6 +774,26 @@ class KorujaStreamHUD {
     return "";
   }
 
+  static getCurrentTrackHtml() {
+    if (!game.settings.get(MODULE_ID, "showMusicTracker")) return "";
+    const playingSounds = [];
+    for (const pl of game.playlists?.contents || []) {
+      if (!pl.playing) continue;
+      for (const s of pl.sounds?.contents || []) {
+        if (s.playing) playingSounds.push({ name: s.name, channel: pl.channel || "music" });
+      }
+    }
+    if (playingSounds.length === 0) return "";
+    // Prioriza canal 'music', senão pega o primeiro som em execução
+    const track = playingSounds.find(s => s.channel === "music") || playingSounds[0];
+    return `
+      <div class="koruja-music-pill" title="Música tocando no Foundry">
+        <span class="music-bars"><i></i><i></i><i></i></span>
+        <span class="music-label">🎵 ${track.name}</span>
+      </div>
+    `;
+  }
+
   static render(flashEvents = {}) {
     if (!this.shouldRender()) {
       this.destroy();
@@ -801,6 +828,7 @@ class KorujaStreamHUD {
     const activeCombatantActorId = activeCombatant?.actor?.id || null;
 
     // 1. Camada de Fundo / Moldura
+    const musicHtml = this.getCurrentTrackHtml();
     let backdropHtml = "";
     if (overlayMode === "builtin-sanguis") {
       const sceneName = game.scenes?.active?.name || "Sanguis et Thus";
@@ -812,6 +840,7 @@ class KorujaStreamHUD {
               <img src="${crestPath}" onerror="this.style.display='none'">
               <span>${sceneName.toUpperCase()}</span>
             </div>
+            ${musicHtml}
             <div class="top-right"><span class="live-dot"></span> AO VIVO</div>
           </div>
 
@@ -853,6 +882,7 @@ class KorujaStreamHUD {
               <img src="${crestPath}" onerror="this.style.display='none'">
               <span>${sceneName.toUpperCase()} — INTERPRETAÇÃO</span>
             </div>
+            ${musicHtml}
             <div class="top-right"><span class="live-dot"></span> AO VIVO</div>
           </div>
 
@@ -1330,6 +1360,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "customOverlayImg", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showChatFeed", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showCombatBox", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "showMusicTracker", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "autoPanCombat", { scope: "world", config: true, name: "Câmera Automática no Combate", type: Boolean, default: true });
   game.settings.register(MODULE_ID, "autoCenterInterval", {
     scope: "world",
@@ -1530,6 +1561,8 @@ Hooks.on("updateCombat", (combat, changed) => {
 });
 
 Hooks.on("deleteCombat", () => KorujaStreamHUD.render());
+Hooks.on("updatePlaylist", () => KorujaStreamHUD.render());
+Hooks.on("updatePlaylistSound", () => KorujaStreamHUD.render());
 
 Hooks.on("createChatMessage", (message) => {
   if (message.whisper?.length > 0 || message.blind) return;

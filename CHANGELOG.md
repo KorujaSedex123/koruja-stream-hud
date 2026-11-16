@@ -2,6 +2,11 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.8.0] - 2026-11-16
+
+### Adicionado
+- **Tracker de Música (Foundry Playlists):** Exibe automaticamente na barra superior o nome da música tocando nas Playlists do Foundry VTT com equalizador animado ao vivo (funciona no Modo Mapa e no Modo Roleplay).
+
 ## [1.7.1] - 2026-11-16
 
 ### Adicionado e Melhorado
