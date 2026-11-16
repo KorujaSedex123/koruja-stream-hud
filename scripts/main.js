@@ -100,6 +100,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
     const autoPanCombat = game.settings.get(MODULE_ID, "autoPanCombat");
+    const autoCenterInterval = Number(game.settings.get(MODULE_ID, "autoCenterInterval")) || 0;
     const cinematicHandouts = game.settings.get(MODULE_ID, "cinematicHandouts");
     const autoLocationBanner = game.settings.get(MODULE_ID, "autoLocationBanner");
     const locationSubtitle = game.settings.get(MODULE_ID, "locationSubtitle") || "Sanguis et Thus";
@@ -132,6 +133,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       showChatFeed,
       showCombatBox,
       autoPanCombat,
+      autoCenterInterval,
       cinematicHandouts,
       autoLocationBanner,
       locationSubtitle,
@@ -250,6 +252,16 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             <input type="checkbox" name="autoPanCombat" ${context.autoPanCombat ? "checked" : ""}>
             <span>Câmera Segue o Turno no Combate</span>
           </label>
+          <div class="koruja-editor-row" style="margin:2px 0 4px;">
+            <label style="font-size:11px; flex:1;">Auto-Centralizar Mapa:</label>
+            <select name="autoCenterInterval" style="height:24px; font-size:11px; width:110px;">
+              <option value="0" ${context.autoCenterInterval === 0 ? "selected" : ""}>Desativado</option>
+              <option value="10" ${context.autoCenterInterval === 10 ? "selected" : ""}>A cada 10s</option>
+              <option value="15" ${context.autoCenterInterval === 15 ? "selected" : ""}>A cada 15s</option>
+              <option value="30" ${context.autoCenterInterval === 30 ? "selected" : ""}>A cada 30s</option>
+              <option value="60" ${context.autoCenterInterval === 60 ? "selected" : ""}>A cada 60s</option>
+            </select>
+          </div>
           <label class="koruja-check-row">
             <input type="checkbox" name="cinematicHandouts" ${context.cinematicHandouts ? "checked" : ""}>
             <span>Vitrine Cinematográfica de Imagens/NPCs</span>
@@ -541,6 +553,7 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     await game.settings.set(MODULE_ID, "showChatFeed", Boolean(data.showChatFeed));
     await game.settings.set(MODULE_ID, "showCombatBox", Boolean(data.showCombatBox));
     await game.settings.set(MODULE_ID, "autoPanCombat", Boolean(data.autoPanCombat));
+    await game.settings.set(MODULE_ID, "autoCenterInterval", Number(data.autoCenterInterval) || 0);
     await game.settings.set(MODULE_ID, "cinematicHandouts", Boolean(data.cinematicHandouts));
     await game.settings.set(MODULE_ID, "autoLocationBanner", Boolean(data.autoLocationBanner));
     await game.settings.set(MODULE_ID, "locationSubtitle", (data.locationSubtitle || "Sanguis et Thus").trim());
@@ -607,6 +620,54 @@ class KorujaStreamHUD {
 
     this.loadRecentMessages();
     this.render();
+    this.startAutoCenterTimer();
+  }
+
+  static startAutoCenterTimer() {
+    if (this.autoCenterTimer) {
+      clearInterval(this.autoCenterTimer);
+      this.autoCenterTimer = null;
+    }
+    if (!this.shouldRender()) return;
+    const sec = Number(game.settings.get(MODULE_ID, "autoCenterInterval")) || 0;
+    if (sec <= 0) return;
+
+    this.autoCenterTimer = setInterval(() => {
+      this.recenterCamera();
+    }, sec * 1000);
+  }
+
+  static recenterCamera() {
+    if (!this.shouldRender() || !canvas?.ready) return;
+    if (getEffectiveOverlayMode() === "builtin-roleplay") return;
+
+    // 1. Se houver combate ativo, centraliza no combatente da vez
+    if (game.combat?.started && game.combat.combatant) {
+      const token = game.combat.combatant.token?.object;
+      if (token && !game.combat.combatant.hidden && !token.document?.hidden) {
+        canvas.animatePan({ x: token.center.x, y: token.center.y, duration: 900 });
+        return;
+      }
+    }
+
+    // 2. Fora de combate, centraliza na média dos tokens dos jogadores na cena
+    const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
+    const partyTokens = canvas.tokens?.placeables?.filter(
+      t => !t.document?.hidden && actorIds.includes(t.actor?.id)
+    ) || [];
+
+    if (partyTokens.length > 0) {
+      const avgX = partyTokens.reduce((sum, t) => sum + t.center.x, 0) / partyTokens.length;
+      const avgY = partyTokens.reduce((sum, t) => sum + t.center.y, 0) / partyTokens.length;
+      canvas.animatePan({ x: avgX, y: avgY, duration: 900 });
+      return;
+    }
+
+    // 3. Fallback: posição inicial configurada na cena
+    const initView = canvas.scene?.initial;
+    if (initView?.x != null && initView?.y != null) {
+      canvas.animatePan({ x: initView.x, y: initView.y, scale: initView.scale, duration: 900 });
+    }
   }
 
   static shouldRender() {
@@ -615,6 +676,10 @@ class KorujaStreamHUD {
 
   static destroy() {
     document.body.classList.remove("koruja-stream-mode-active");
+    if (this.autoCenterTimer) {
+      clearInterval(this.autoCenterTimer);
+      this.autoCenterTimer = null;
+    }
     if (this.epicBannerTimer) clearTimeout(this.epicBannerTimer);
     if (this.locationBannerTimer) clearTimeout(this.locationBannerTimer);
     if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
@@ -1266,6 +1331,15 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "showChatFeed", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showCombatBox", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "autoPanCombat", { scope: "world", config: true, name: "Câmera Automática no Combate", type: Boolean, default: true });
+  game.settings.register(MODULE_ID, "autoCenterInterval", {
+    scope: "world",
+    config: true,
+    name: "Timer de Auto-Centralização do Mapa (segundos)",
+    hint: "Recentraliza automaticamente o mapa nos jogadores/turno a cada X segundos (0 = desativado).",
+    type: Number,
+    default: 15,
+    onChange: () => KorujaStreamHUD.startAutoCenterTimer()
+  });
   game.settings.register(MODULE_ID, "cinematicHandouts", { scope: "world", config: true, name: "Vitrine Cinematográfica de Imagens/NPCs", type: Boolean, default: true });
   game.settings.register(MODULE_ID, "autoLocationBanner", { scope: "world", config: true, name: "Banner Automático de Localização", type: Boolean, default: true });
   game.settings.register(MODULE_ID, "locationSubtitle", { scope: "world", config: false, type: String, default: "Sanguis et Thus" });
@@ -1309,6 +1383,7 @@ Hooks.once("init", () => {
   game.korujaStreamHud = {
     openConfig: () => new StreamPartyConfigApp().render({ force: true }),
     refresh: () => KorujaStreamHUD.render(),
+    recenter: () => KorujaStreamHUD.recenterCamera(),
     setBoss: (actorId) => game.settings.set(MODULE_ID, "bossActorId", actorId || ""),
     setMode: (mode) => game.settings.set(MODULE_ID, "overlayMode", mode || "builtin-sanguis"),
     showLocation: ({ title, subtitle } = {}) => {

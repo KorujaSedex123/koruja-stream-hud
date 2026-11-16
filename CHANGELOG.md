@@ -2,6 +2,12 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.7.1] - 2026-11-16
+
+### Adicionado e Melhorado
+- **Transparência Total do Fundo:** Forçada transparência absoluta em `html` e `body` no modo Stream (para colocar seu próprio wallpaper/fundo atrás no OBS, deixando visíveis apenas o mapa, as câmeras e os cards).
+- **Timer de Auto-Centralização do Mapa:** Recentraliza suavemente a câmera do mapa a cada X segundos (padrão 15s, configurável em 10s/15s/30s/60s ou desativado) nos jogadores ou no turno ativo do combate, além de bloquear arrasto acidental no `#board`.
+
 ## [1.7.0] - 2026-11-16
 
 ### Adicionado

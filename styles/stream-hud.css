@@ -3,8 +3,12 @@
  * ========================================================= */
 
 body.koruja-stream-mode-active,
+body.koruja-stream-mode-active.game,
+body.koruja-stream-mode-active.vtt,
 html:has(body.koruja-stream-mode-active) {
   background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
   overflow: hidden !important;
 }
 
@@ -38,6 +42,7 @@ body.koruja-stream-mode-active #board {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: none !important;
 }
 
 #koruja-stream-hud {
