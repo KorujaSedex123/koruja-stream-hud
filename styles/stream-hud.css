@@ -321,4 +321,6 @@ body.koruja-stream-mode-active > *:not(#koruja-stream-hud) {
 .koruja-url-box { display: flex; flex-direction: column; gap: 4px; }
 .koruja-url-box input { font-family: monospace; font-size: 12px; cursor: pointer; }
 .koruja-save-btn { width: 100%; padding: 8px; font-weight: 700; cursor: pointer; }
+.koruja-open-window-btn { width: 100%; margin-top: 6px; padding: 6px 8px; font-size: 12px; font-weight: 600; cursor: pointer; background: rgba(212, 175, 55, 0.16); border: 1px solid #8a6d3b; color: #f6d37f; border-radius: 4px; }
+.koruja-open-window-btn:hover { background: rgba(212, 175, 55, 0.3); }
 .koruja-stream-btn { margin-top: 4px; }

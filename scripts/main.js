@@ -54,7 +54,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const customOverlayImg = game.settings.get(MODULE_ID, "customOverlayImg") || "";
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
-    const previewMode = game.settings.get(MODULE_ID, "previewInGM") || false;
     const savedPositions = game.settings.get(MODULE_ID, "cardPositions") || {};
 
     this.#draftPositions = foundry.utils.mergeObject(
@@ -73,7 +72,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       customOverlayImg,
       showChatFeed,
       showCombatBox,
-      previewMode,
       positions: this.#draftPositions
     };
   }
@@ -141,10 +139,10 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             <input type="checkbox" name="showCombatBox" ${context.showCombatBox ? "checked" : ""}>
             <span>Mostrar Caixa de Rodada / Turno</span>
           </label>
-          <label class="koruja-check-row">
-            <input type="checkbox" name="previewInGM" ${context.previewMode ? "checked" : ""}>
-            <span>Pré-visualizar na minha tela de Mestre</span>
-          </label>
+
+          <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
+          </button>
         </div>
 
         <!-- Coluna Direita: Editor Visual Drag & Drop (800x450 = escala de 1920x1080) -->
@@ -211,8 +209,13 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const customBg = container.querySelector("#koruja-stage-bg-custom");
     const browseBtn = container.querySelector(".koruja-browse-btn");
     const resetBtn = container.querySelector(".koruja-reset-pos-btn");
+    const openTabBtn = container.querySelector("#koruja-open-live-tab");
     const hiddenJson = container.querySelector("#koruja-positions-json");
     const stage = container.querySelector("#koruja-preview-stage");
+
+    openTabBtn?.addEventListener("click", () => {
+      window.open(`${window.location.origin}/?streamhud=1`, "_blank", "width=1920,height=1080");
+    });
 
     modeSelect?.addEventListener("change", () => {
       const val = modeSelect.value;
@@ -316,7 +319,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     await game.settings.set(MODULE_ID, "customOverlayImg", data.customOverlayImg || "");
     await game.settings.set(MODULE_ID, "showChatFeed", Boolean(data.showChatFeed));
     await game.settings.set(MODULE_ID, "showCombatBox", Boolean(data.showCombatBox));
-    await game.settings.set(MODULE_ID, "previewInGM", Boolean(data.previewInGM));
     await game.settings.set(MODULE_ID, "cardPositions", parsedPositions);
 
     ui.notifications.info(`Stream HUD salvo (${orderedIds.length} jogadores).`);
@@ -356,9 +358,8 @@ class KorujaStreamHUD {
   }
 
   static shouldRender() {
-    if (isStreamMode()) return true;
-    if (game.user?.isGM && game.settings.get(MODULE_ID, "previewInGM")) return true;
-    return false;
+    // Nunca bloqueia a tela normal do Mestre: só renderiza na janela/aba separada (?streamhud=1) ou no usuário Stream
+    return isStreamMode();
   }
 
   static destroy() {
@@ -628,7 +629,6 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "showAC", { name: "Exibir Classe de Armadura (CA)", scope: "world", config: true, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showConditions", { name: "Exibir Ícones de Condições", scope: "world", config: true, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showRolls", { name: "Exibir Popup de Rolagem nos Cards", scope: "world", config: true, type: Boolean, default: true });
-  game.settings.register(MODULE_ID, "previewInGM", { name: "Pré-visualizar Overlay na minha tela de Mestre", scope: "client", config: true, type: Boolean, default: false, onChange: () => KorujaStreamHUD.init() });
 
   game.settings.registerMenu(MODULE_ID, "partyConfigMenu", {
     name: "Editor Visual da Live",
