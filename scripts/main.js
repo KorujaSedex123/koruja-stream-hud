@@ -620,22 +620,26 @@ class KorujaStreamHUD {
     }
   }
 
-  static detectNaturalD20(roll) {
+  static detectCriticalOrFumble(roll) {
     if (!roll) return null;
+
+    // Respeita o limiar de crítico/falha da ficha/arma no D&D 5e (ex: crítico no 18, 19 ou 20)
+    if (roll.isCritical) return "crit";
+    if (roll.isFumble) return "fumble";
 
     const dice = Array.isArray(roll.dice) ? roll.dice : [];
     for (const die of dice) {
       if (die?.faces !== 20) continue;
+      const critThreshold = Number(die?.options?.critical) || 20;
+      const fumbleThreshold = Number(die?.options?.fumble) || 1;
       const results = Array.isArray(die.results) ? die.results : [];
       for (const r of results) {
         if (r?.active === false) continue;
-        if (r?.result === 20) return "crit";
-        if (r?.result === 1) return "fumble";
+        if (r?.result >= critThreshold) return "crit";
+        if (r?.result <= fumbleThreshold) return "fumble";
       }
     }
 
-    if (roll.isCritical) return "crit";
-    if (roll.isFumble) return "fumble";
     return null;
   }
 
@@ -654,7 +658,7 @@ class KorujaStreamHUD {
     const isCrit = type === "crit";
     const banner = document.createElement("div");
     banner.className = `koruja-epic-banner ${isCrit ? "epic-crit" : "epic-fumble"}`;
-    const titleText = isCrit ? "⚔️ 20 NATURAL — ACERTO CRÍTICO!" : "💀 1 NATURAL — FALHA CRÍTICA!";
+    const titleText = isCrit ? "⚔️ ACERTO CRÍTICO!" : "💀 FALHA CRÍTICA!";
 
     banner.innerHTML = `
       ${img ? `<img class="epic-banner-portrait" src="${img}" alt="${name}" onerror="this.style.display='none'">` : ""}
@@ -761,6 +765,12 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => KorujaStreamHUD.init());
 
+Hooks.on("canvasReady", () => {
+  if (!KorujaStreamHUD.shouldRender()) return;
+  KorujaStreamHUD.render();
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 250);
+});
+
 Hooks.on("renderActorDirectory", (app, html) => {
   if (!game.user?.isGM) return;
   const headerActions = html.querySelector?.(".header-actions") || html[0]?.querySelector(".header-actions");
@@ -807,7 +817,7 @@ Hooks.on("createChatMessage", (message) => {
       KorujaStreamHUD.showRollToast(actorId, roll);
     }
 
-    const natResult = KorujaStreamHUD.detectNaturalD20(roll);
+    const natResult = KorujaStreamHUD.detectCriticalOrFumble(roll);
     if (natResult) {
       const actor = actorId ? game.actors.get(actorId) : null;
       const name = message.speaker?.alias || actor?.name || message.author?.name || "Aventureiro";
