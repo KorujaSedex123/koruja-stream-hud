@@ -2,6 +2,15 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.3.0] - 2026-11-16
+
+### Adicionado
+- **Barra de Vida de Chefe (Boss HP Bar):** Barra épica no topo do mapa estilo Dark Souls com rastro de dano atrasado, Resistências Lendárias e botão rápido de Coroa direto no Token HUD para o Mestre ativar/desativar.
+- **Testes contra a Morte (Death Saves):** Ao cair a 0 PV, a barra do jogador exibe automaticamente os 3 Sucessos e 3 Falhas em tempo real.
+- **Concentração & Inspiração Heroica:** Anel arcano pulsante para personagens concentrando em magia e emblema dourado de d20 para Inspiração Heroica.
+- **Câmera Diretora Automática (Auto-Pan):** A câmera do cliente Stream desliza suavemente até o combatente ativo a cada mudança de turno.
+- **Vitrine Cinematográfica de Imagens/NPCs:** Intercepta o comando "Mostrar aos Jogadores" (`ImagePopout`) no cliente Stream e exibe a arte em uma moldura gótica elegante sem janelas cinzas do Foundry.
+
 ## [1.2.0] - 2026-11-15
 
 ### Adicionado

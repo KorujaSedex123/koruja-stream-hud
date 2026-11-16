@@ -54,6 +54,9 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     const customOverlayImg = game.settings.get(MODULE_ID, "customOverlayImg") || "";
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
+    const autoPanCombat = game.settings.get(MODULE_ID, "autoPanCombat");
+    const cinematicHandouts = game.settings.get(MODULE_ID, "cinematicHandouts");
+    const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
     const savedPositions = game.settings.get(MODULE_ID, "cardPositions") || {};
 
     this.#draftPositions = foundry.utils.mergeObject(
@@ -65,13 +68,21 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       .filter(a => a.type === "character")
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    const npcs = game.actors
+      .filter(a => a.type === "npc")
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     return {
       characters,
+      npcs,
       selectedIds,
       overlayMode,
       customOverlayImg,
       showChatFeed,
       showCombatBox,
+      autoPanCombat,
+      cinematicHandouts,
+      bossActorId,
       positions: this.#draftPositions
     };
   }
@@ -99,10 +110,13 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       `;
     }).join("");
 
+    const bossOptions = context.npcs.map(npc => {
+      const sel = npc.id === context.bossActorId ? "selected" : "";
+      return `<option value="${npc.id}" ${sel}>${npc.name}</option>`;
+    }).join("");
+
     const streamUrl = `${window.location.origin}/?streamhud=1`;
     const pos = context.positions;
-
-    // Escala do preview: 800x450 (exatamente 1920x1080 * 0.416667)
     const SCALE = 800 / 1920;
 
     container.innerHTML = `
@@ -114,7 +128,16 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             ${charRows || "<p class='notes'>Nenhum personagem (Character) encontrado.</p>"}
           </div>
 
-          <div class="koruja-section-title" style="margin-top: 8px;"><i class="fa-solid fa-image"></i> Fundo / Moldura da Overlay</div>
+          <div class="koruja-section-title" style="margin-top: 6px;"><i class="fa-solid fa-crown"></i> Barra de Chefe (Boss HP)</div>
+          <div class="form-group stacked">
+            <select name="bossActorId">
+              <option value="">— Nenhum Chefe Ativo —</option>
+              ${bossOptions}
+            </select>
+            <p class="notes" style="font-size:10px; opacity:0.75; margin:2px 0 0;">Dica: clique com o botão direito em qualquer token no mapa e clique no ícone de Coroa para ativar/desativar na hora!</p>
+          </div>
+
+          <div class="koruja-section-title" style="margin-top: 6px;"><i class="fa-solid fa-image"></i> Fundo / Moldura da Overlay</div>
           <div class="form-group stacked">
             <select name="overlayMode" id="koruja-overlay-mode-select">
               <option value="builtin-sanguis" ${context.overlayMode === "builtin-sanguis" ? "selected" : ""}>Moldura Embutida (Sanguis et Thus)</option>
@@ -133,25 +156,32 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
 
           <label class="koruja-check-row">
             <input type="checkbox" name="showChatFeed" ${context.showChatFeed ? "checked" : ""}>
-            <span>Mostrar Caixa de Rolagens ao Vivo</span>
+            <span>Caixa de Rolagens ao Vivo</span>
           </label>
           <label class="koruja-check-row">
             <input type="checkbox" name="showCombatBox" ${context.showCombatBox ? "checked" : ""}>
-            <span>Mostrar Caixa de Rodada / Turno</span>
+            <span>Caixa de Rodada / Turno</span>
+          </label>
+          <label class="koruja-check-row">
+            <input type="checkbox" name="autoPanCombat" ${context.autoPanCombat ? "checked" : ""}>
+            <span>Câmera Segue o Turno no Combate</span>
+          </label>
+          <label class="koruja-check-row">
+            <input type="checkbox" name="cinematicHandouts" ${context.cinematicHandouts ? "checked" : ""}>
+            <span>Vitrine Cinematográfica de Imagens/NPCs</span>
           </label>
 
-          <div class="koruja-live-actions">
-            <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
+          <button type="button" class="koruja-open-window-btn" id="koruja-open-live-tab">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Tela da Live (Nova Aba)
+          </button>
+
+          <div class="koruja-test-btn-row">
+            <button type="button" class="koruja-test-btn test-crit" id="koruja-test-crit">
+              <i class="fa-solid fa-star"></i> Testar Crítico
             </button>
-            <div class="koruja-test-buttons">
-              <button type="button" class="koruja-test-btn test-crit" id="koruja-test-crit" title="Disparar banner de 20 Natural na aba da Live">
-                ⚔️ Testar 20 Natural
-              </button>
-              <button type="button" class="koruja-test-btn test-fumble" id="koruja-test-fumble" title="Disparar banner de 1 Natural na aba da Live">
-                💀 Testar 1 Natural
-              </button>
-            </div>
+            <button type="button" class="koruja-test-btn test-fumble" id="koruja-test-fumble">
+              <i class="fa-solid fa-skull"></i> Testar Falha Crítica
+            </button>
           </div>
         </div>
 
@@ -163,7 +193,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
           </div>
 
           <div class="koruja-preview-stage" id="koruja-preview-stage">
-            <!-- Prévia do fundo escolhido -->
             <div class="koruja-stage-bg-builtin" style="${context.overlayMode === "builtin-sanguis" ? "" : "display:none;"}">
               <div class="mini-header">SANGUIS ET THUS — MOLDURA EMBUTIDA</div>
               <div class="mini-slot-foundry">MAPA DO FOUNDRY VTT</div>
@@ -175,7 +204,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
             </div>
             <img class="koruja-stage-bg-custom" id="koruja-stage-bg-custom" src="${context.customOverlayImg}" style="${context.overlayMode === "custom-image" && context.customOverlayImg ? "" : "display:none;"}">
 
-            <!-- Caixas arrastáveis -->
             ${["p1", "p2", "p3", "p4"].map((key, i) => `
               <div class="koruja-drag-box drag-player" data-key="${key}" style="left:${Math.round(pos[key].x * SCALE)}px; top:${Math.round(pos[key].y * SCALE)}px;">
                 <i class="fa-solid fa-grip-vertical"></i> Jogador ${i + 1}
@@ -229,35 +257,25 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       window.open(`${window.location.origin}/?streamhud=1`, "_blank", "width=1920,height=1080");
     });
 
-    const triggerEpicTest = (result) => {
-      const partyIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
-      const sampleActor =
-        partyIds.map(id => game.actors.get(id)).find(Boolean) ||
-        game.actors.find(a => a.type === "character");
+    const sendTestBanner = (type) => {
+      const selectedIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
+      const firstActor = selectedIds.length ? game.actors.get(selectedIds[0]) : game.actors.find(a => a.type === "character");
       const payload = {
-        type: "epic-banner-test",
-        result,
-        name: sampleActor?.name || "Aventureiro",
-        img: sampleActor?.img || ""
+        action: "test-epic-banner",
+        type,
+        name: firstActor?.name || "Herói de Teste",
+        img: firstActor?.img || ""
       };
-
       if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel(MODULE_ID);
-        channel.postMessage(payload);
-        channel.close();
+        const ch = new BroadcastChannel(MODULE_ID);
+        ch.postMessage(payload);
+        ch.close();
       }
-      if (KorujaStreamHUD.shouldRender()) {
-        KorujaStreamHUD.showEpicBanner(result, payload);
-      }
-      ui.notifications.info(
-        result === "crit"
-          ? "Teste de 20 Natural enviado para a tela da Live!"
-          : "Teste de 1 Natural enviado para a tela da Live!"
-      );
+      ui.notifications.info(`Alerta de ${type === "crit" ? "Acerto Crítico" : "Falha Crítica"} enviado para a aba da Live!`);
     };
 
-    testCritBtn?.addEventListener("click", () => triggerEpicTest("crit"));
-    testFumbleBtn?.addEventListener("click", () => triggerEpicTest("fumble"));
+    testCritBtn?.addEventListener("click", () => sendTestBanner("crit"));
+    testFumbleBtn?.addEventListener("click", () => sendTestBanner("fumble"));
 
     modeSelect?.addEventListener("change", () => {
       const val = modeSelect.value;
@@ -295,7 +313,6 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
       ui.notifications.info("Posições restauradas para o padrão.");
     });
 
-    // Drag & Drop fluido no palco de prévia
     container.querySelectorAll(".koruja-drag-box").forEach(box => {
       box.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -357,10 +374,13 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
     }
 
     await game.settings.set(MODULE_ID, "partyActorIds", orderedIds);
+    await game.settings.set(MODULE_ID, "bossActorId", data.bossActorId || "");
     await game.settings.set(MODULE_ID, "overlayMode", data.overlayMode || "builtin-sanguis");
     await game.settings.set(MODULE_ID, "customOverlayImg", data.customOverlayImg || "");
     await game.settings.set(MODULE_ID, "showChatFeed", Boolean(data.showChatFeed));
     await game.settings.set(MODULE_ID, "showCombatBox", Boolean(data.showCombatBox));
+    await game.settings.set(MODULE_ID, "autoPanCombat", Boolean(data.autoPanCombat));
+    await game.settings.set(MODULE_ID, "cinematicHandouts", Boolean(data.cinematicHandouts));
     await game.settings.set(MODULE_ID, "cardPositions", parsedPositions);
 
     ui.notifications.info(`Stream HUD salvo (${orderedIds.length} jogadores).`);
@@ -376,9 +396,12 @@ class KorujaStreamHUD {
   static hpCache = new Map();
   static rollTimers = new Map();
   static chatHistory = [];
-  static epicBannerTimer = null;
   static epicBannerEl = null;
+  static epicBannerTimer = null;
+  static spotlightEl = null;
+  static spotlightTimer = null;
   static broadcastChannel = null;
+  static lastBossHpPct = null;
 
   static init() {
     if (!this.shouldRender()) {
@@ -400,10 +423,9 @@ class KorujaStreamHUD {
 
     if (!this.broadcastChannel && typeof BroadcastChannel !== "undefined") {
       this.broadcastChannel = new BroadcastChannel(MODULE_ID);
-      this.broadcastChannel.onmessage = (event) => {
-        const data = event.data;
-        if (data?.type === "epic-banner-test" && (data.result === "crit" || data.result === "fumble")) {
-          this.showEpicBanner(data.result, { name: data.name, img: data.img });
+      this.broadcastChannel.onmessage = (ev) => {
+        if (ev.data?.action === "test-epic-banner") {
+          this.showEpicBanner(ev.data.type, { name: ev.data.name, img: ev.data.img });
         }
       };
     }
@@ -413,17 +435,15 @@ class KorujaStreamHUD {
   }
 
   static shouldRender() {
-    // Nunca bloqueia a tela normal do Mestre: só renderiza na janela/aba separada (?streamhud=1) ou no usuário Stream
     return isStreamMode();
   }
 
   static destroy() {
     document.body.classList.remove("koruja-stream-mode-active");
-    if (this.epicBannerTimer) {
-      clearTimeout(this.epicBannerTimer);
-      this.epicBannerTimer = null;
-    }
+    if (this.epicBannerTimer) clearTimeout(this.epicBannerTimer);
+    if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
     this.epicBannerEl = null;
+    this.spotlightEl = null;
     if (this.broadcastChannel) {
       this.broadcastChannel.close();
       this.broadcastChannel = null;
@@ -439,7 +459,7 @@ class KorujaStreamHUD {
       .filter(m => !m.blind && (!m.whisper || m.whisper.length === 0))
       .slice(-5);
 
-    this.chatHistory = publicMsgs.map(m => this.#formatChatMessage(m)).filter(Boolean).slice(-5);
+    this.chatHistory = publicMsgs.map(m => this.#formatChatMessage(m)).filter(Boolean);
   }
 
   static #formatChatMessage(message) {
@@ -455,12 +475,11 @@ class KorujaStreamHUD {
       };
     }
 
-    // Limpa HTML simples de mensagens públicas de fala/descrição
     const temp = document.createElement("div");
     temp.innerHTML = message.content || "";
     const plain = temp.textContent?.trim();
     if (!plain) return null;
-    const truncated = plain.length > 110 ? `${plain.slice(0, 107)}...` : plain;
+    const truncated = plain.length > 90 ? `${plain.slice(0, 87)}...` : plain;
     return { author, text: truncated, type: "" };
   }
 
@@ -478,6 +497,7 @@ class KorujaStreamHUD {
     const showConditions = game.settings.get(MODULE_ID, "showConditions");
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
     const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
+    const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
 
     const pos = foundry.utils.mergeObject(
       foundry.utils.deepClone(DEFAULT_POSITIONS),
@@ -516,7 +536,51 @@ class KorujaStreamHUD {
       backdropHtml = `<img class="koruja-custom-overlay-bg" src="${customOverlayImg}" alt="Overlay">`;
     }
 
-    // 2. Cards dos Jogadores nas posições exatas
+    // 2. Barra de Chefe (Boss HP Bar estilo Dark Souls)
+    let bossHtml = "";
+    const bossActor = bossActorId ? game.actors.get(bossActorId) : null;
+    if (bossActor) {
+      const bhp = bossActor.system?.attributes?.hp || { value: 0, max: 1 };
+      const bMax = Math.max(1, Number(bhp.max) || 1);
+      const bVal = Math.max(0, Number(bhp.value) || 0);
+      const bPct = Math.min(100, Math.round((bVal / bMax) * 100));
+      const trailPct = this.lastBossHpPct !== null && this.lastBossHpPct > bPct ? this.lastBossHpPct : bPct;
+      this.lastBossHpPct = bPct;
+
+      const legres = bossActor.system?.resources?.legres;
+      let legresHtml = "";
+      if (legres && Number(legres.max) > 0) {
+        const maxL = Math.min(5, Number(legres.max));
+        const valL = Math.max(0, Number(legres.value) || 0);
+        const gems = Array.from({ length: maxL }, (_, i) =>
+          `<span class="boss-gem ${i < valL ? "active" : "spent"}" title="Resistência Lendária">◆</span>`
+        ).join("");
+        legresHtml = `<div class="boss-legres">${gems}</div>`;
+      }
+
+      bossHtml = `
+        <div class="koruja-boss-bar ${bVal === 0 ? "boss-defeated" : ""}">
+          <div class="boss-portrait-wrap">
+            <img src="${bossActor.img}" alt="${bossActor.name}">
+          </div>
+          <div class="boss-info-wrap">
+            <div class="boss-header-row">
+              <span class="boss-name"><i class="fa-solid fa-skull"></i> ${bossActor.name}</span>
+              ${legresHtml}
+              <span class="boss-hp-num">${bVal === 0 ? "DERROTADO" : `${bVal} / ${bMax}`}</span>
+            </div>
+            <div class="boss-bar-outer">
+              <div class="boss-bar-trail" style="width: ${trailPct}%"></div>
+              <div class="boss-bar-fill" style="width: ${bPct}%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      this.lastBossHpPct = null;
+    }
+
+    // 3. Cards dos Jogadores (Death Saves + Concentração + Inspiração)
     const cardsHtml = actors.map((actor, index) => {
       const slotKey = `p${index + 1}`;
       const coords = pos[slotKey] || DEFAULT_POSITIONS[slotKey];
@@ -534,12 +598,39 @@ class KorujaStreamHUD {
       const isTurn = activeCombatantActorId === actor.id;
       const isDown = hpVal === 0;
       const isBloodied = hpPct > 0 && hpPct <= 50;
+      const isConcentrating = actor.statuses?.has("concentrating") || false;
+      const hasInspiration = Boolean(actor.system?.attributes?.inspiration);
       const flashClass = flashEvents[actor.id] ? `flash-${flashEvents[actor.id]}` : "";
       const barColorClass = hpPct <= 25 ? "hp-critical" : hpPct <= 50 ? "hp-bloodied" : "hp-healthy";
 
+      // Death Saves quando 0 PV
+      let barOrDeathHtml = "";
+      if (showHP) {
+        if (isDown) {
+          const dsSuccess = Number(actor.system?.attributes?.death?.success) || 0;
+          const dsFail = Number(actor.system?.attributes?.death?.failure) || 0;
+          const succPips = [0, 1, 2].map(i => `<span class="ds-pip ds-succ ${i < dsSuccess ? "filled" : ""}">🛡️</span>`).join("");
+          const failPips = [0, 1, 2].map(i => `<span class="ds-pip ds-fail ${i < dsFail ? "filled" : ""}">💀</span>`).join("");
+          barOrDeathHtml = `
+            <div class="koruja-death-saves" title="Testes contra a Morte">
+              <div class="ds-group">${succPips}</div>
+              <span class="ds-divider">MORRENDO</span>
+              <div class="ds-group">${failPips}</div>
+            </div>
+          `;
+        } else {
+          barOrDeathHtml = `
+            <div class="koruja-hp-bar-outer">
+              <div class="koruja-hp-bar-fill ${barColorClass}" style="width: ${hpPct}%"></div>
+              <div class="koruja-hp-text">${hpVal} / ${hpMax}${hpTemp > 0 ? ` <span class="hp-temp">(+${hpTemp})</span>` : ""}</div>
+            </div>
+          `;
+        }
+      }
+
       let conditionsHtml = "";
       if (showConditions && actor.statuses?.size > 0) {
-        const badges = Array.from(actor.statuses).slice(0, 5).map(statusId => {
+        const badges = Array.from(actor.statuses).filter(s => s !== "concentrating").slice(0, 5).map(statusId => {
           const eff = CONFIG.statusEffects.find(e => e.id === statusId);
           if (!eff) return "";
           const label = game.i18n.localize(eff.name || eff.label || statusId);
@@ -549,13 +640,15 @@ class KorujaStreamHUD {
       }
 
       return `
-        <div class="koruja-player-card ${isTurn ? "is-active-turn" : ""} ${isDown ? "is-down" : ""} ${flashClass}"
+        <div class="koruja-player-card ${isTurn ? "is-active-turn" : ""} ${isDown ? "is-down" : ""} ${isConcentrating ? "is-concentrating" : ""} ${flashClass}"
              style="left: ${coords.x}px; top: ${coords.y}px;" data-actor-id="${actor.id}">
           <div class="koruja-roll-toast" id="koruja-roll-${actor.id}"></div>
           <div class="koruja-card-inner">
             <div class="koruja-portrait-wrap">
               <img class="koruja-portrait ${isBloodied ? "bloodied" : ""}" src="${actor.img}" alt="${actor.name}">
               ${isTurn ? `<div class="koruja-turn-badge">TURNO</div>` : ""}
+              ${hasInspiration ? `<div class="koruja-insp-badge" title="Inspiração Heroica"><i class="fa-solid fa-dice-d20"></i></div>` : ""}
+              ${isConcentrating ? `<div class="koruja-conc-badge" title="Concentrando em Magia"><i class="fa-solid fa-wand-sparkles"></i></div>` : ""}
               ${showAC ? `
                 <div class="koruja-ac-badge">
                   <i class="fa-solid fa-shield"></i>
@@ -568,12 +661,7 @@ class KorujaStreamHUD {
                 <span class="koruja-char-name">${actor.name}</span>
                 <span class="koruja-char-lvl">Nv ${level}</span>
               </div>
-              ${showHP ? `
-                <div class="koruja-hp-bar-outer">
-                  <div class="koruja-hp-bar-fill ${barColorClass}" style="width: ${hpPct}%"></div>
-                  <div class="koruja-hp-text">${hpVal} / ${hpMax}${hpTemp > 0 ? ` <span class="hp-temp">(+${hpTemp})</span>` : ""}</div>
-                </div>
-              ` : ""}
+              ${barOrDeathHtml}
               ${conditionsHtml}
             </div>
           </div>
@@ -581,7 +669,7 @@ class KorujaStreamHUD {
       `;
     }).join("");
 
-    // 3. Caixa de Rolagens & Chat ao Vivo do Foundry
+    // 4. Caixa de Rolagens & Chat ao Vivo
     let chatHtml = "";
     if (showChatFeed) {
       const chatCoords = pos.chat || DEFAULT_POSITIONS.chat;
@@ -599,7 +687,7 @@ class KorujaStreamHUD {
       `;
     }
 
-    // 4. Caixa de Rodada / Turno Ativo
+    // 5. Caixa de Rodada / Turno Ativo
     let combatHtml = "";
     if (showCombatBox) {
       const combatCoords = pos.combat || DEFAULT_POSITIONS.combat;
@@ -614,16 +702,14 @@ class KorujaStreamHUD {
       `;
     }
 
-    this.container.innerHTML = `${backdropHtml}${cardsHtml}${chatHtml}${combatHtml}`;
-    if (this.epicBannerEl) {
-      this.container.appendChild(this.epicBannerEl);
-    }
+    this.container.innerHTML = `${backdropHtml}${bossHtml}${cardsHtml}${chatHtml}${combatHtml}`;
+    if (this.epicBannerEl) this.container.appendChild(this.epicBannerEl);
+    if (this.spotlightEl) this.container.appendChild(this.spotlightEl);
   }
 
   static detectCriticalOrFumble(roll) {
     if (!roll) return null;
 
-    // Respeita o limiar de crítico/falha da ficha/arma no D&D 5e (ex: crítico no 18, 19 ou 20)
     if (roll.isCritical) return "crit";
     if (roll.isFumble) return "fumble";
 
@@ -646,14 +732,8 @@ class KorujaStreamHUD {
   static showEpicBanner(type, { name = "Aventureiro", img = "" } = {}) {
     if (!this.shouldRender() || !this.container) return;
 
-    if (this.epicBannerTimer) {
-      clearTimeout(this.epicBannerTimer);
-      this.epicBannerTimer = null;
-    }
-    if (this.epicBannerEl) {
-      this.epicBannerEl.remove();
-      this.epicBannerEl = null;
-    }
+    if (this.epicBannerTimer) clearTimeout(this.epicBannerTimer);
+    if (this.epicBannerEl) this.epicBannerEl.remove();
 
     const isCrit = type === "crit";
     const banner = document.createElement("div");
@@ -678,6 +758,38 @@ class KorujaStreamHUD {
       }
       this.epicBannerTimer = null;
     }, 4500);
+  }
+
+  static showSpotlight({ src = "", title = "" } = {}) {
+    if (!this.shouldRender() || !this.container || !src) return;
+
+    if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
+    if (this.spotlightEl) this.spotlightEl.remove();
+
+    const card = document.createElement("div");
+    card.className = "koruja-spotlight-card";
+    card.innerHTML = `
+      <div class="spotlight-img-wrap">
+        <img src="${src}" alt="${title}">
+      </div>
+      ${title ? `<div class="spotlight-caption">${title}</div>` : ""}
+    `;
+
+    this.spotlightEl = card;
+    this.container.appendChild(card);
+
+    this.spotlightTimer = setTimeout(() => {
+      if (this.spotlightEl === card) {
+        card.classList.add("closing");
+        setTimeout(() => {
+          if (this.spotlightEl === card) {
+            card.remove();
+            this.spotlightEl = null;
+          }
+        }, 400);
+      }
+      this.spotlightTimer = null;
+    }, 10000);
   }
 
   static showRollToast(actorId, roll) {
@@ -718,10 +830,13 @@ class KorujaStreamHUD {
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "partyActorIds", { scope: "world", config: false, type: Array, default: [], onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "bossActorId", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "overlayMode", { scope: "world", config: false, type: String, default: "builtin-sanguis", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "customOverlayImg", { scope: "world", config: false, type: String, default: "", onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showChatFeed", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
   game.settings.register(MODULE_ID, "showCombatBox", { scope: "world", config: false, type: Boolean, default: true, onChange: () => KorujaStreamHUD.render() });
+  game.settings.register(MODULE_ID, "autoPanCombat", { scope: "world", config: true, name: "Câmera Automática no Combate", type: Boolean, default: true });
+  game.settings.register(MODULE_ID, "cinematicHandouts", { scope: "world", config: true, name: "Vitrine Cinematográfica de Imagens/NPCs", type: Boolean, default: true });
   game.settings.register(MODULE_ID, "cardPositions", { scope: "world", config: false, type: Object, default: DEFAULT_POSITIONS, onChange: () => KorujaStreamHUD.render() });
 
   game.settings.register(MODULE_ID, "streamUser", {
@@ -751,7 +866,7 @@ Hooks.once("init", () => {
   game.settings.registerMenu(MODULE_ID, "partyConfigMenu", {
     name: "Editor Visual da Live",
     label: "Abrir Editor de Overlay & Posições",
-    hint: "Escolha os jogadores, suba uma imagem de overlay e arraste os cards na tela.",
+    hint: "Escolha os jogadores, Chefe, suba uma imagem de overlay e arraste os cards.",
     icon: "fa-solid fa-video",
     type: StreamPartyConfigApp,
     restricted: true
@@ -759,7 +874,8 @@ Hooks.once("init", () => {
 
   game.korujaStreamHud = {
     openConfig: () => new StreamPartyConfigApp().render({ force: true }),
-    refresh: () => KorujaStreamHUD.render()
+    refresh: () => KorujaStreamHUD.render(),
+    setBoss: (actorId) => game.settings.set(MODULE_ID, "bossActorId", actorId || "")
   };
 });
 
@@ -771,6 +887,7 @@ Hooks.on("canvasReady", () => {
   setTimeout(() => window.dispatchEvent(new Event("resize")), 250);
 });
 
+// Botão rápido na aba de Atores
 Hooks.on("renderActorDirectory", (app, html) => {
   if (!game.user?.isGM) return;
   const headerActions = html.querySelector?.(".header-actions") || html[0]?.querySelector(".header-actions");
@@ -785,14 +902,56 @@ Hooks.on("renderActorDirectory", (app, html) => {
   headerActions.appendChild(btn);
 });
 
+// Botão de Coroa no Token HUD para marcar/desmarcar Chefe com 1 clique
+Hooks.on("renderTokenHUD", (hud, html) => {
+  if (!game.user?.isGM) return;
+  const actorId = hud.object?.actor?.id;
+  if (!actorId) return;
+
+  const root = html instanceof HTMLElement ? html : html[0];
+  const colRight = root?.querySelector(".col.right");
+  if (!colRight || colRight.querySelector(".koruja-boss-toggle")) return;
+
+  const currentBoss = game.settings.get(MODULE_ID, "bossActorId");
+  const isBoss = currentBoss === actorId;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `control-icon koruja-boss-toggle ${isBoss ? "active" : ""}`;
+  btn.title = isBoss ? "Remover da Barra de Chefe da Live" : "Exibir na Barra de Chefe da Live";
+  btn.innerHTML = `<i class="fa-solid fa-crown"></i>`;
+  btn.addEventListener("click", async () => {
+    const nextBoss = isBoss ? "" : actorId;
+    await game.settings.set(MODULE_ID, "bossActorId", nextBoss);
+    ui.notifications.info(nextBoss ? `👑 ${hud.object.actor.name} exibido como Chefe na Live!` : "Barra de Chefe removida da Live.");
+    hud.clear();
+  });
+  colRight.appendChild(btn);
+});
+
+// Intercepta ImagePopout ("Mostrar aos Jogadores") na tela da Live para Vitrine Cinematográfica
+Hooks.on("renderImagePopout", (app, html) => {
+  if (!KorujaStreamHUD.shouldRender() || !game.settings.get(MODULE_ID, "cinematicHandouts")) return;
+  const el = html instanceof HTMLElement ? html : html[0];
+  if (!el) return;
+
+  const src = app.options?.src || app.document?.src || el.querySelector("img")?.src || "";
+  const title = app.options?.window?.title || app.title || "";
+  if (src) {
+    el.style.display = "none";
+    KorujaStreamHUD.showSpotlight({ src, title });
+  }
+});
+
 Hooks.on("updateActor", (actor) => {
   const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
-  if (!actorIds.includes(actor.id)) return;
+  const bossActorId = game.settings.get(MODULE_ID, "bossActorId");
+  if (!actorIds.includes(actor.id) && actor.id !== bossActorId) return;
 
   const newHp = Number(actor.system?.attributes?.hp?.value ?? 0);
   const oldHp = KorujaStreamHUD.hpCache.get(actor.id);
   const flash = {};
-  if (oldHp !== undefined) {
+  if (actorIds.includes(actor.id) && oldHp !== undefined) {
     if (newHp < oldHp) flash[actor.id] = "damage";
     else if (newHp > oldHp) flash[actor.id] = "heal";
   }
@@ -802,7 +961,26 @@ Hooks.on("updateActor", (actor) => {
 Hooks.on("createActiveEffect", (e) => { if (e.parent?.documentName === "Actor") KorujaStreamHUD.render(); });
 Hooks.on("deleteActiveEffect", (e) => { if (e.parent?.documentName === "Actor") KorujaStreamHUD.render(); });
 Hooks.on("updateActiveEffect", (e) => { if (e.parent?.documentName === "Actor") KorujaStreamHUD.render(); });
-Hooks.on("updateCombat", () => KorujaStreamHUD.render());
+
+// Atualiza barra de combate + Câmera Diretora Automática (Auto-Pan)
+Hooks.on("updateCombat", (combat, changed) => {
+  KorujaStreamHUD.render();
+
+  if (!KorujaStreamHUD.shouldRender() || !game.settings.get(MODULE_ID, "autoPanCombat")) return;
+  if (!combat.started) return;
+  if (changed.turn === undefined && changed.round === undefined && changed.active === undefined) return;
+
+  const combatant = combat.combatant;
+  const token = combatant?.token?.object;
+  if (!token || combatant.hidden || token.document?.hidden) return;
+
+  canvas.animatePan({
+    x: token.center.x,
+    y: token.center.y,
+    duration: 1000
+  });
+});
+
 Hooks.on("deleteCombat", () => KorujaStreamHUD.render());
 
 Hooks.on("createChatMessage", (message) => {
