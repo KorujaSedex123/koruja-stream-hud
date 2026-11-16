@@ -11,6 +11,24 @@ const DEFAULT_POSITIONS = {
   combat: { x: 1460, y: 874 }
 };
 
+const ROLEPLAY_POSITIONS = {
+  p1: { x: 24, y: 452 },
+  p2: { x: 496, y: 452 },
+  p3: { x: 968, y: 452 },
+  p4: { x: 24, y: 940 },
+  p5: { x: 496, y: 940 },
+  p6: { x: 968, y: 940 },
+  chat: { x: 1456, y: 384 },
+  combat: { x: 1456, y: 874 }
+};
+
+function getEffectiveOverlayMode() {
+  const urlMode = new URLSearchParams(window.location.search).get("mode");
+  if (urlMode === "rp" || urlMode === "roleplay") return "builtin-roleplay";
+  if (urlMode === "map") return "builtin-sanguis";
+  return game.settings.get(MODULE_ID, "overlayMode") || "builtin-sanguis";
+}
+
 /**
  * Verifica se o cliente atual deve exibir o modo Stream HUD transparente.
  */
@@ -147,7 +165,8 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
           <div class="koruja-section-title" style="margin-top: 6px;"><i class="fa-solid fa-image"></i> Fundo / Moldura da Overlay</div>
           <div class="form-group stacked">
             <select name="overlayMode" id="koruja-overlay-mode-select">
-              <option value="builtin-sanguis" ${context.overlayMode === "builtin-sanguis" ? "selected" : ""}>Moldura Embutida (Sanguis et Thus)</option>
+              <option value="builtin-sanguis" ${context.overlayMode === "builtin-sanguis" ? "selected" : ""}>Modo Mapa / Combate (Sanguis et Thus)</option>
+              <option value="builtin-roleplay" ${context.overlayMode === "builtin-roleplay" ? "selected" : ""}>Modo Roleplay / Sem Mapa (Câmeras Grandes)</option>
               <option value="custom-image" ${context.overlayMode === "custom-image" ? "selected" : ""}>Minha Imagem PNG/WebP Customizada</option>
               <option value="none" ${context.overlayMode === "none" ? "selected" : ""}>Sem Fundo (Apenas Cards Transparentes)</option>
             </select>
@@ -229,8 +248,9 @@ class StreamPartyConfigApp extends foundry.applications.api.ApplicationV2 {
           </div>
 
           <div class="koruja-url-box">
-            <label><i class="fa-solid fa-link"></i> Link Único para o OBS (Fonte de Navegador 1920x1080):</label>
-            <input type="text" readonly value="${streamUrl}" onclick="this.select(); navigator.clipboard.writeText(this.value); ui.notifications.info('URL copiada para o OBS!');">
+            <label><i class="fa-solid fa-link"></i> Links Prontos para o OBS (1920x1080):</label>
+            <input type="text" readonly value="${streamUrl}" title="Modo Padrão / Mapa" onclick="this.select(); navigator.clipboard.writeText(this.value); ui.notifications.info('URL do Modo Mapa copiada!');">
+            <input type="text" readonly value="${streamUrl}&mode=rp" title="Modo Roleplay (Sem Mapa)" style="margin-top:3px;" onclick="this.select(); navigator.clipboard.writeText(this.value); ui.notifications.info('URL do Modo Roleplay copiada!');">
           </div>
         </div>
       </div>
@@ -499,19 +519,25 @@ class KorujaStreamHUD {
     }
     if (!this.container) this.init();
 
-    const overlayMode = game.settings.get(MODULE_ID, "overlayMode") || "builtin-sanguis";
+    const overlayMode = getEffectiveOverlayMode();
+    const isRoleplayMode = overlayMode === "builtin-roleplay";
+    document.body.classList.toggle("koruja-stream-roleplay-mode", isRoleplayMode);
+    this.container.classList.toggle("is-roleplay-mode", isRoleplayMode);
+
     const customOverlayImg = game.settings.get(MODULE_ID, "customOverlayImg") || "";
     const showHP = game.settings.get(MODULE_ID, "showHP");
     const showAC = game.settings.get(MODULE_ID, "showAC");
     const showConditions = game.settings.get(MODULE_ID, "showConditions");
     const showChatFeed = game.settings.get(MODULE_ID, "showChatFeed");
-    const showCombatBox = game.settings.get(MODULE_ID, "showCombatBox");
+    const showCombatBox = isRoleplayMode ? false : game.settings.get(MODULE_ID, "showCombatBox");
     const bossActorId = game.settings.get(MODULE_ID, "bossActorId") || "";
 
-    const pos = foundry.utils.mergeObject(
-      foundry.utils.deepClone(DEFAULT_POSITIONS),
-      foundry.utils.deepClone(game.settings.get(MODULE_ID, "cardPositions") || {})
-    );
+    const pos = isRoleplayMode
+      ? foundry.utils.deepClone(ROLEPLAY_POSITIONS)
+      : foundry.utils.mergeObject(
+          foundry.utils.deepClone(DEFAULT_POSITIONS),
+          foundry.utils.deepClone(game.settings.get(MODULE_ID, "cardPositions") || {})
+        );
 
     const actorIds = game.settings.get(MODULE_ID, "partyActorIds") || [];
     const actors = actorIds.slice(0, 6).map(id => game.actors.get(id)).filter(Boolean);
@@ -541,6 +567,29 @@ class KorujaStreamHUD {
           <div class="koruja-cutout koruja-cutout-p4"></div>
           <div class="koruja-cutout koruja-cutout-p5"></div>
           <div class="koruja-cutout koruja-cutout-p6"></div>
+        </div>
+      `;
+    } else if (overlayMode === "builtin-roleplay") {
+      const sceneName = game.scenes?.active?.name || "Sanguis et Thus";
+      const crestPath = `modules/${MODULE_ID}/assets/crest.png`;
+      backdropHtml = `
+        <div class="koruja-builtin-frame koruja-rp-frame">
+          <div class="koruja-top-bar">
+            <div class="top-left">
+              <img src="${crestPath}" onerror="this.style.display='none'">
+              <span>${sceneName.toUpperCase()} — INTERPRETAÇÃO</span>
+            </div>
+            <div class="top-right"><span class="live-dot"></span> AO VIVO</div>
+          </div>
+
+          <!-- Grade 3x2 de Câmeras Grandes (456x460 cada) + Câmera Mestre (440x300) -->
+          <div class="koruja-cutout koruja-rp-p1"></div>
+          <div class="koruja-cutout koruja-rp-p2"></div>
+          <div class="koruja-cutout koruja-rp-p3"></div>
+          <div class="koruja-cutout koruja-rp-p4"></div>
+          <div class="koruja-cutout koruja-rp-p5"></div>
+          <div class="koruja-cutout koruja-rp-p6"></div>
+          <div class="koruja-cutout koruja-rp-gm"></div>
         </div>
       `;
     } else if (overlayMode === "custom-image" && customOverlayImg) {
@@ -893,7 +942,8 @@ Hooks.once("init", () => {
   game.korujaStreamHud = {
     openConfig: () => new StreamPartyConfigApp().render({ force: true }),
     refresh: () => KorujaStreamHUD.render(),
-    setBoss: (actorId) => game.settings.set(MODULE_ID, "bossActorId", actorId || "")
+    setBoss: (actorId) => game.settings.set(MODULE_ID, "bossActorId", actorId || ""),
+    setMode: (mode) => game.settings.set(MODULE_ID, "overlayMode", mode || "builtin-sanguis")
   };
 });
 
@@ -918,6 +968,19 @@ Hooks.on("renderActorDirectory", (app, html) => {
   btn.title = "Abrir Editor Visual da Overlay";
   btn.addEventListener("click", () => game.korujaStreamHud.openConfig());
   headerActions.appendChild(btn);
+
+  const toggleBtn = document.createElement("button");
+  toggleBtn.type = "button";
+  toggleBtn.className = "koruja-stream-btn";
+  toggleBtn.innerHTML = `<i class="fa-solid fa-masks-theater"></i> RP / Mapa`;
+  toggleBtn.title = "Alternar rapidamente entre Modo Mapa e Modo Roleplay (Sem Mapa) na Live";
+  toggleBtn.addEventListener("click", async () => {
+    const cur = game.settings.get(MODULE_ID, "overlayMode");
+    const next = cur === "builtin-roleplay" ? "builtin-sanguis" : "builtin-roleplay";
+    await game.settings.set(MODULE_ID, "overlayMode", next);
+    ui.notifications.info(`🎭 Live alterada para: ${next === "builtin-roleplay" ? "Modo Roleplay (Sem Mapa)" : "Modo Mapa / Combate"}`);
+  });
+  headerActions.appendChild(toggleBtn);
 });
 
 // Botão de Coroa no Token HUD para marcar/desmarcar Chefe com 1 clique (usa Token UUID para suportar tokens não-vinculados)

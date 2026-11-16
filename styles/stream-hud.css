@@ -1069,3 +1069,29 @@ body.koruja-stream-mode-active #board {
   font-size: 10px;
   color: #d4af37;
 }
+
+
+/* =========================================================
+ * 4. MODO ROLEPLAY / INTERPRETAÇÃO (SEM MAPA - 6 JOGADORES)
+ * ========================================================= */
+
+body.koruja-stream-roleplay-mode #board {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.koruja-rp-p1 { top: 56px; left: 24px; width: 456px; height: 460px; }
+.koruja-rp-p2 { top: 56px; left: 496px; width: 456px; height: 460px; }
+.koruja-rp-p3 { top: 56px; left: 968px; width: 456px; height: 460px; }
+.koruja-rp-p4 { top: 544px; left: 24px; width: 456px; height: 460px; }
+.koruja-rp-p5 { top: 544px; left: 496px; width: 456px; height: 460px; }
+.koruja-rp-p6 { top: 544px; left: 968px; width: 456px; height: 460px; }
+.koruja-rp-gm { top: 56px; left: 1456px; width: 440px; height: 306px; }
+
+#koruja-stream-hud.is-roleplay-mode .koruja-player-card {
+  width: 456px;
+}
+
+#koruja-stream-hud.is-roleplay-mode .koruja-chat-feed-box {
+  height: 620px;
+}

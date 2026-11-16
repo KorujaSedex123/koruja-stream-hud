@@ -2,6 +2,12 @@
 
 Todas as alterações notáveis deste módulo serão documentadas neste arquivo.
 
+## [1.5.0] - 2026-11-16
+
+### Adicionado
+- **Modo Roleplay / Sem Mapa (`builtin-roleplay`):** Nova overlay focada em interpretação com grade 3x2 de câmeras grandes (`456x460`) para os 6 jogadores, câmera ampliada do Mestre (`440x306`) e feed de rolagens estendido (`620px`).
+- **Botão Rápido "RP / Mapa":** Alterne entre o Modo Mapa e o Modo Roleplay ao vivo com 1 clique direto na aba de Atores, ou use o parâmetro `?mode=rp` em uma segunda cena do OBS.
+
 ## [1.4.0] - 2026-11-16
 
 ### Alterado
